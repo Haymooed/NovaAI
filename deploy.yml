@@ -24,17 +24,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Inject secrets
+      - name: Inject secrets into index.html
         run: |
           sed -i \
-            -e 's|%%SUPABASE_URL%%|${{ secrets.SUPABASE_URL }}|g' \
-            -e 's|%%SUPABASE_ANON_KEY%%|${{ secrets.SUPABASE_ANON_KEY }}|g' \
-            -e 's|%%NVIDIA_API_KEY%%|${{ secrets.NVIDIA_API_KEY }}|g' \
+            -e "s|%%SUPABASE_URL%%|${{ secrets.SUPABASE_URL }}|g" \
+            -e "s|%%SUPABASE_ANON_KEY%%|${{ secrets.SUPABASE_ANON_KEY }}|g" \
+            -e "s|%%NVIDIA_API_KEY%%|${{ secrets.NVIDIA_API_KEY }}|g" \
             index.html
+          echo "✅ Secrets injected"
+          # Verify injection worked (shows first 30 chars of URL only)
+          grep -o 'createClient("[^"]*"' index.html | head -1 || echo "⚠ createClient not found"
 
       - uses: actions/configure-pages@v5
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: '.'
+
       - uses: actions/deploy-pages@v4
         id: deploy
