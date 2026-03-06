@@ -30,6 +30,7 @@ jobs:
             -e "s|%%SUPABASE_URL%%|${{ secrets.SUPABASE_URL }}|g" \
             -e "s|%%SUPABASE_ANON_KEY%%|${{ secrets.SUPABASE_ANON_KEY }}|g" \
             -e "s|%%NVIDIA_API_KEY%%|${{ secrets.NVIDIA_API_KEY }}|g" \
+            -e "s|%%PROXY_URL%%|${{ secrets.PROXY_URL }}|g" \
             index.html
           echo "✅ Secrets injected"
 
