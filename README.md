@@ -1,2 +1,3 @@
 > [!TIP]
-> Suggested to go back to website!
+
+> Suggested to go back to website! https://haymooed.github.io/HoppesAI/
