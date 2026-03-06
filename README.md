@@ -1,3 +1,4 @@
 > [!TIP]
-> Suggested to go back to website! https://haymooed.github.io/HoppesAI/
+> Suggested to go back to website! https://haymooed.github.io/NovaAI
+
 
