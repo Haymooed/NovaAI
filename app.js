@@ -12,8 +12,40 @@ function isConfigured() {
 // ── STATE ─────────────────────────────────────────────────────
 let sb, ME, SESSION_TOKEN, VIEW, dmChannel, allUsers = [], totalTokens = 0, totalMsgs = 0, dailyMsgs = 0;
 
+// ── SETTINGS STATE ────────────────────────────────────────────
+const SETTINGS_KEY = 'novaai_settings';
+let SETTINGS = {
+  theme: 'dark',
+  fontSize: 'medium',
+  density: 'comfortable',
+  systemPrompt: '',
+  responseStyle: 'balanced',
+  language: 'English',
+};
+function loadSettings() {
+  try { const s = localStorage.getItem(SETTINGS_KEY); if (s) SETTINGS = { ...SETTINGS, ...JSON.parse(s) }; } catch(_){}
+  applyTheme();
+  applyFontSize();
+  applyDensity();
+}
+function saveSettings() {
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(SETTINGS));
+  applyTheme(); applyFontSize(); applyDensity();
+}
+function applyTheme() {
+  document.documentElement.setAttribute('data-theme', SETTINGS.theme);
+}
+function applyFontSize() {
+  const sizes = { small: '13px', medium: '15px', large: '17px' };
+  document.body.style.fontSize = sizes[SETTINGS.fontSize] || '15px';
+}
+function applyDensity() {
+  document.documentElement.setAttribute('data-density', SETTINGS.density);
+}
+
 // ── INIT ──────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
+  loadSettings();
   try {
     const res = await fetch('/api/config');
     if (res.ok) { const cfg = await res.json(); SUPABASE_URL = cfg.supabaseUrl; SUPABASE_ANON = cfg.supabaseAnon; }
@@ -343,14 +375,14 @@ async function sendAI(text) {
   el('send-btn').disabled = true;
   try {
     const messages = [
-      { role:'system', content:'You are NovaAI, a helpful and knowledgeable AI assistant. Be clear, accurate and friendly. Use markdown for code, and structure longer answers with headers.' },
+      { role:'system', content: buildSystemPrompt() },
       ...(history||[]),
       { role:'user', content:text }
     ];
     const res = await fetch('/api/chat', {
       method:'POST',
       headers: { 'Content-Type':'application/json', 'X-User-Token': SESSION_TOKEN },
-      body: JSON.stringify({ messages, temperature:0.7, max_tokens:2048 })
+      body: JSON.stringify({ messages, temperature: tempFromStyle(), max_tokens:2048 })
     });
     typingEl.remove();
 
@@ -608,4 +640,192 @@ function renderMD(raw) {
   s = s.replace(/\n\n+/g,'</p><p>');
   s = s.replace(/([^>])\n([^<])/g,'$1<br/>$2');
   return `<p>${s}</p>`;
+}
+
+// ── SETTINGS HELPERS ──────────────────────────────────────────
+function buildSystemPrompt() {
+  const base = 'You are NovaAI, a helpful and knowledgeable AI assistant. Be clear, accurate and friendly. Use markdown for code, and structure longer answers with headers.';
+  const styles = {
+    concise: ' Keep responses brief and to the point.',
+    balanced: '',
+    detailed: ' Be thorough and provide detailed explanations.',
+    creative: ' Be creative, expressive and think outside the box.',
+  };
+  const langNote = SETTINGS.language !== 'English' ? ` Always respond in ${SETTINGS.language}.` : '';
+  const custom = SETTINGS.systemPrompt?.trim() ? `\n\nAdditional instructions: ${SETTINGS.systemPrompt}` : '';
+  return base + (styles[SETTINGS.responseStyle]||'') + langNote + custom;
+}
+
+function tempFromStyle() {
+  const temps = { concise: 0.3, balanced: 0.7, detailed: 0.6, creative: 1.0 };
+  return temps[SETTINGS.responseStyle] || 0.7;
+}
+
+// ── SETTINGS MODAL ────────────────────────────────────────────
+window.openSettings = () => {
+  // Populate all fields from SETTINGS
+  setSettingActive('theme', SETTINGS.theme);
+  setSettingActive('fontSize', SETTINGS.fontSize);
+  setSettingActive('density', SETTINGS.density);
+  setSettingActive('responseStyle', SETTINGS.responseStyle);
+  el('setting-lang').value = SETTINGS.language;
+  el('setting-system-prompt').value = SETTINGS.systemPrompt || '';
+  el('settings-modal').classList.add('on');
+  showSettingsTab('appearance');
+};
+window.closeSettings = () => el('settings-modal').classList.remove('on');
+
+window.showSettingsTab = (tab) => {
+  document.querySelectorAll('.stab-btn').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
+  document.querySelectorAll('.stab-panel').forEach(p => p.classList.toggle('hidden', p.dataset.panel !== tab));
+};
+
+function setSettingActive(group, value) {
+  document.querySelectorAll(`[data-setting="${group}"]`).forEach(b => {
+    b.classList.toggle('on', b.dataset.value === value);
+  });
+}
+
+window.pickSetting = (group, value) => {
+  SETTINGS[group] = value;
+  setSettingActive(group, value);
+  saveSettings();
+};
+
+window.saveAISettings = () => {
+  SETTINGS.systemPrompt = el('setting-system-prompt').value.trim();
+  SETTINGS.language = el('setting-lang').value;
+  saveSettings();
+  showToast('✓ AI preferences saved');
+};
+
+// ── ACCOUNT SETTINGS ──────────────────────────────────────────
+window.changePassword = async () => {
+  const curr = el('curr-pass').value;
+  const newp = el('new-pass').value;
+  const conf = el('conf-pass').value;
+  const errEl = el('pass-err'), okEl = el('pass-ok');
+  errEl.classList.add('hidden'); okEl.classList.add('hidden');
+  if (!curr || !newp) { errEl.textContent='Fill in all fields.'; errEl.classList.remove('hidden'); return; }
+  if (newp.length < 6) { errEl.textContent='New password must be 6+ chars.'; errEl.classList.remove('hidden'); return; }
+  if (newp !== conf) { errEl.textContent='Passwords do not match.'; errEl.classList.remove('hidden'); return; }
+  // Re-auth then update
+  const { error: signInErr } = await sb.auth.signInWithPassword({ email: ME.email, password: curr });
+  if (signInErr) { errEl.textContent='Current password is incorrect.'; errEl.classList.remove('hidden'); return; }
+  const { error } = await sb.auth.updateUser({ password: newp });
+  if (error) { errEl.textContent = error.message; errEl.classList.remove('hidden'); return; }
+  el('curr-pass').value=''; el('new-pass').value=''; el('conf-pass').value='';
+  okEl.classList.remove('hidden');
+};
+
+window.changeEmail = async () => {
+  const newEmail = el('new-email').value.trim();
+  const errEl = el('email-err'), okEl = el('email-ok');
+  errEl.classList.add('hidden'); okEl.classList.add('hidden');
+  if (!newEmail || !newEmail.includes('@')) { errEl.textContent='Enter a valid email.'; errEl.classList.remove('hidden'); return; }
+  const { error } = await sb.auth.updateUser({ email: newEmail });
+  if (error) { errEl.textContent = error.message; errEl.classList.remove('hidden'); return; }
+  okEl.classList.remove('hidden');
+  el('new-email').value='';
+};
+
+window.deleteAccount = async () => {
+  const conf = prompt('Type DELETE to confirm deleting your account permanently:');
+  if (conf !== 'DELETE') return;
+  // Delete all user data
+  await sb.from('ai_messages').delete().in('chat_id',
+    (await sb.from('ai_chats').select('id').eq('user_id', ME.id)).data?.map(c=>c.id)||[]
+  );
+  await sb.from('ai_chats').delete().eq('user_id', ME.id);
+  await sb.from('profiles').delete().eq('id', ME.id);
+  await sb.auth.signOut();
+  showToast('Account deleted.');
+};
+
+// ── DATA & PRIVACY ────────────────────────────────────────────
+window.exportChats = async () => {
+  const btn = el('export-btn');
+  btn.disabled = true; btn.textContent = 'Exporting…';
+  try {
+    const { data: chats } = await sb.from('ai_chats').select('id,title,model,created_at').eq('user_id', ME.id);
+    const full = [];
+    for (const chat of chats||[]) {
+      const { data: msgs } = await sb.from('ai_messages').select('role,content,created_at').eq('chat_id', chat.id).order('created_at',{ascending:true});
+      full.push({ ...chat, messages: msgs||[] });
+    }
+    const blob = new Blob([JSON.stringify({ exported_at: new Date().toISOString(), user: ME.username, chats: full }, null, 2)], { type:'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download=`novaai-export-${Date.now()}.json`; a.click();
+    URL.revokeObjectURL(url);
+  } finally { btn.disabled=false; btn.textContent='Export All Chats'; }
+};
+
+window.importChats = async (input) => {
+  const file = input.files[0]; if (!file) return;
+  const statusEl = el('import-status');
+  statusEl.textContent = 'Importing…'; statusEl.className = 'import-status info';
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    // Support NovaAI export, ChatGPT export, and Claude export formats
+    let chats = [];
+    if (data.chats) {
+      // NovaAI format
+      chats = data.chats;
+    } else if (data.conversations) {
+      // ChatGPT format
+      chats = data.conversations.map(c => ({
+        title: c.title || 'Imported Chat',
+        model: 'imported',
+        created_at: new Date(c.create_time*1000).toISOString(),
+        messages: Object.values(c.mapping||{})
+          .filter(n => n.message?.content?.parts?.length && n.message.role !== 'system')
+          .sort((a,b) => (a.message.create_time||0)-(b.message.create_time||0))
+          .map(n => ({ role: n.message.role==='assistant'?'assistant':'user', content: n.message.content.parts.join('') }))
+          .filter(m => m.content?.trim())
+      }));
+    } else if (Array.isArray(data)) {
+      // Claude export format (array of conversations)
+      chats = data.map(c => ({
+        title: c.name || 'Imported Chat',
+        model: 'imported',
+        created_at: c.created_at || new Date().toISOString(),
+        messages: (c.chat_messages||[]).map(m => ({ role: m.sender==='human'?'user':'assistant', content: Array.isArray(m.content)?m.content.map(x=>x.text||'').join(''):m.content||'' }))
+      }));
+    }
+    let imported = 0;
+    for (const chat of chats) {
+      const { data: newChat, error } = await sb.from('ai_chats').insert({ user_id: ME.id, title: chat.title||'Imported', model: chat.model||'imported', updated_at: new Date().toISOString() }).select().single();
+      if (error || !newChat) continue;
+      const msgs = (chat.messages||[]).filter(m=>m.content?.trim()).map(m => ({ chat_id: newChat.id, role: m.role==='assistant'?'assistant':'user', content: m.content }));
+      if (msgs.length) await sb.from('ai_messages').insert(msgs);
+      imported++;
+    }
+    statusEl.textContent = `✓ Imported ${imported} chat${imported!==1?'s':''}!`;
+    statusEl.className = 'import-status ok';
+    await loadAIChats();
+  } catch(err) {
+    statusEl.textContent = '✗ Failed: ' + err.message;
+    statusEl.className = 'import-status err';
+  }
+  input.value = '';
+};
+
+window.clearAllChats = async () => {
+  if (!confirm('Delete ALL your chat history? This cannot be undone.')) return;
+  const { data: chats } = await sb.from('ai_chats').select('id').eq('user_id', ME.id);
+  for (const c of chats||[]) await sb.from('ai_messages').delete().eq('chat_id', c.id);
+  await sb.from('ai_chats').delete().eq('user_id', ME.id);
+  VIEW = null; showEmpty();
+  await loadAIChats();
+  showToast('All chats cleared.');
+};
+
+function showToast(msg) {
+  let t = document.getElementById('toast-el');
+  if (!t) { t = document.createElement('div'); t.id='toast-el'; t.className='toast'; document.body.appendChild(t); }
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 3500);
 }
