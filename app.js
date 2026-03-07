@@ -26,7 +26,8 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   let authResolved = false;
 
-  sb.auth.onAuthStateChange(async (event, session) => {
+  async function handleSession(session) {
+    if (authResolved) return;
     authResolved = true;
     hide('loading-screen');
     if (session?.user) {
@@ -39,9 +40,18 @@ window.addEventListener('DOMContentLoaded', async () => {
       hide('app-wrap');
       show('auth-wrap');
     }
+  }
+
+  // Manually get session first (works reliably on GitHub Pages subpaths)
+  const { data: { session } } = await sb.auth.getSession();
+  await handleSession(session);
+
+  // Also listen for future changes (login/logout)
+  sb.auth.onAuthStateChange(async (event, session) => {
+    await handleSession(session);
   });
 
-  // Fallback: if Supabase never fires (e.g. network issue), show auth after 8s
+  // Final fallback
   setTimeout(() => {
     if (!authResolved) {
       hide('loading-screen');
