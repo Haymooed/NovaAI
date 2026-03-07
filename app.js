@@ -6,8 +6,7 @@ function esc(t){ return String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')
 function grow(t){ t.style.height='auto'; t.style.height=Math.min(t.scrollHeight,180)+'px' }
 
 function isConfigured() {
-  return !SUPABASE_URL.includes('%%') && !SUPABASE_ANON.includes('%%') &&
-    !NV_BASE.includes('%%') &&
+  return SUPABASE_URL && SUPABASE_ANON &&
     SUPABASE_URL.startsWith('https://') && SUPABASE_ANON.length > 20;
 }
 
@@ -16,6 +15,18 @@ let sb, ME, VIEW, dmChannel, allUsers = [], totalTokens = 0, totalMsgs = 0;
 
 // ── INIT ──────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
+  // Fetch config from Cloudflare Pages Function
+  try {
+    const res = await fetch('/api/config');
+    if (res.ok) {
+      const cfg = await res.json();
+      SUPABASE_URL  = cfg.supabaseUrl;
+      SUPABASE_ANON = cfg.supabaseAnon;
+    }
+  } catch(e) {
+    console.warn('Could not fetch config:', e);
+  }
+
   if (!isConfigured()) {
     hide('loading-screen');
     show('config-error');
@@ -271,9 +282,9 @@ async function sendAI(text) {
       ...(history||[]),
       { role:'user', content:text }
     ];
-    const res = await fetch(`${NV_BASE}/chat/completions`, {
+    const res = await fetch('/api/chat', {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${NVIDIA_API_KEY}`, 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ model, messages, temperature:0.7, max_tokens:2048 })
     });
     typingEl.remove();
