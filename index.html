@@ -197,7 +197,7 @@
           </label>
 
           <textarea id="msg-input" class="msg-input" placeholder="Message NovaAI…" rows="1"
-            onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+            onkeydown="handleKey(event)" oninput="autoResize(event.target)"></textarea>
 
           <button id="send-btn" class="send-btn" onclick="sendMessage()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
@@ -237,7 +237,7 @@
         <div class="group-input-area">
           <textarea id="group-msg-input" class="msg-input" placeholder="Message group…" rows="1"
             onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendGroupMessage()}"
-            oninput="autoResize(this)"></textarea>
+            oninput="autoResize(event.target)"></textarea>
           <button class="send-btn" onclick="sendGroupMessage()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
           </button>
