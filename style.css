@@ -189,3 +189,50 @@ input,textarea,select{font-family:var(--font)}
   .msg-wrap,.typing-row{padding-left:12px;padding-right:12px}
   .input-zone{padding:10px 12px 14px}
 }
+
+/* PRO BADGE */
+.pro-badge{background:linear-gradient(135deg,#7c6ef7,#a78bfa);color:#fff;font-size:.58rem;font-weight:700;padding:2px 6px;border-radius:10px;margin-left:5px;vertical-align:middle;letter-spacing:.04em}
+
+/* MSG COUNTER */
+.msg-counter{font-size:.72rem;padding:6px 9px;margin-bottom:4px;border-radius:7px;background:var(--bg3)}
+
+/* ADMIN SIDEBAR BTN */
+.admin-sb-btn{display:flex;align-items:center;gap:8px;width:100%;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:8px;color:#ef4444;font-size:.8rem;font-weight:600;padding:8px 12px;margin-bottom:6px;transition:all .15s}
+.admin-sb-btn:hover{background:rgba(239,68,68,.15)}
+
+/* MODEL LABEL */
+.model-label{font-size:.8rem;font-weight:600;color:var(--text2);padding:6px 22px;border-bottom:1px solid var(--border)}
+
+/* RENAME INPUT */
+.rename-input{background:var(--bg3);border:1px solid var(--accent);border-radius:5px;color:var(--text);font-size:.85rem;padding:2px 6px;width:100%;outline:none;font-family:var(--font)}
+
+/* CHAT ROW BUTTONS */
+.cr-btn{display:none;background:none;border:none;color:var(--text3);padding:3px;border-radius:4px;flex-shrink:0;cursor:pointer}
+.chat-row:hover .cr-btn{display:flex}
+.cr-btn:hover{color:var(--text);background:var(--bg4)}
+.cr-del:hover{color:var(--red) !important}
+
+/* PROFILE AVATAR */
+.prof-av-wrap{position:relative;width:80px;margin:0 auto 14px;display:flex;align-items:center;justify-content:center}
+.prof-av{width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--accent),#a78bfa);overflow:hidden}
+.avatar-upload-btn{position:absolute;bottom:0;right:-4px;background:var(--bg4);border:2px solid var(--bg);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2);transition:all .15s}
+.avatar-upload-btn:hover{background:var(--accent);color:#fff}
+
+/* COLOR PICKER */
+.color-picker-grid{display:flex;flex-wrap:wrap;gap:8px;padding:4px 0}
+.color-swatch{width:26px;height:26px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s;flex-shrink:0}
+.color-swatch:hover{transform:scale(1.15)}
+.color-swatch.on{border-color:#fff;transform:scale(1.15)}
+
+/* ADMIN PANEL */
+.admin-user-row{display:flex;align-items:center;gap:12px;padding:10px 4px;border-bottom:1px solid var(--border)}
+.admin-user-row:last-child{border-bottom:none}
+.admin-av{width:34px;height:34px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:700;color:#fff}
+.admin-info{flex:1;min-width:0}
+.admin-uname{font-size:.875rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.admin-usub{font-size:.72rem;color:var(--text3)}
+.admin-tier-btns{display:flex;gap:5px;flex-shrink:0}
+.tier-btn{background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text2);font-size:.75rem;font-weight:600;padding:5px 10px;transition:all .15s;cursor:pointer}
+.tier-btn:hover{background:var(--bg4)}
+.tier-btn.on{background:var(--bg4);color:var(--text);border-color:var(--border2)}
+.tier-btn.pro.on{background:linear-gradient(135deg,#7c6ef7,#a78bfa);color:#fff;border-color:transparent}
