@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark" data-density="comfortable">
+<html lang="en" data-theme="dark" data-density="comfortable" data-fs="md">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
 <title>NovaAI</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
@@ -12,90 +12,82 @@
 </head>
 <body>
 
-<!-- ── Auth Screen ─────────────────────────────────────── -->
+<!-- ── Auth ───────────────────────────────────────────────── -->
 <div id="auth-screen" class="auth-screen">
   <div class="auth-card">
     <div class="auth-logo"><span class="logo-n">N</span>ovaAI</div>
     <div class="auth-tabs">
-      <button class="auth-tab active" onclick="switchAuthTab('login')">Sign In</button>
-      <button class="auth-tab" onclick="switchAuthTab('register')">Create Account</button>
+      <button class="auth-tab active" data-tab="login" onclick="switchAuthTab('login')">Sign In</button>
+      <button class="auth-tab" data-tab="register" onclick="switchAuthTab('register')">Sign Up</button>
     </div>
     <div id="auth-error" class="auth-error hidden"></div>
     <div id="login-form">
-      <input id="login-email" class="auth-input" type="email" placeholder="Email address" autocomplete="email"/>
+      <input id="login-email" class="auth-input" type="email" placeholder="Email" autocomplete="email"/>
       <input id="login-pass" class="auth-input" type="password" placeholder="Password" autocomplete="current-password"/>
       <button class="auth-btn" onclick="doLogin()">Sign In</button>
     </div>
     <div id="register-form" class="hidden">
       <input id="reg-name" class="auth-input" type="text" placeholder="Display name"/>
-      <input id="reg-email" class="auth-input" type="email" placeholder="Email address"/>
+      <input id="reg-email" class="auth-input" type="email" placeholder="Email"/>
       <input id="reg-pass" class="auth-input" type="password" placeholder="Password (min 6 chars)"/>
       <button class="auth-btn" onclick="doRegister()">Create Account</button>
     </div>
   </div>
 </div>
 
-<!-- ── App Shell ───────────────────────────────────────── -->
+<!-- ── App ────────────────────────────────────────────────── -->
 <div id="app" class="app hidden">
-
-  <!-- Mobile overlay -->
   <div id="sidebar-overlay" class="sidebar-overlay" onclick="closeSidebar()"></div>
 
-  <!-- ── Sidebar ──────────────────────────────────────── -->
+  <!-- Sidebar -->
   <aside id="sidebar" class="sidebar">
-    <div class="sidebar-header">
+    <div class="sidebar-top">
       <div class="logo"><span class="logo-n">N</span>ovaAI</div>
-      <button class="icon-btn" id="new-chat-btn" onclick="newChat()" title="New Chat">
+      <button class="icon-btn" onclick="newChat()" title="New chat">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
       </button>
     </div>
 
-    <!-- Search chats -->
     <div class="sidebar-search">
-      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-      <input id="chat-search-input" type="text" placeholder="Search chats…" oninput="filterChats(this.value)"/>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="search-ico"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" placeholder="Search chats…" oninput="filterChats(this.value)"/>
     </div>
 
-    <!-- Nav sections -->
-    <nav class="sidebar-nav">
-      <button class="nav-item active" id="nav-chats" onclick="showSection('chats')">
+    <div class="sidebar-nav">
+      <button class="nav-btn active" id="nav-chats" onclick="setActiveSection('chats')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         AI Chats
       </button>
-      <button class="nav-item" id="nav-groups" onclick="showSection('groups')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        Group Chats
+      <button class="nav-btn" id="nav-groups" onclick="setActiveSection('groups')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Groups
       </button>
-      <button class="nav-item" id="nav-updates" onclick="showSection('updates')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
-        Update Log
-        <span id="updates-badge" class="badge hidden">●</span>
+      <button class="nav-btn" id="nav-updates" onclick="setActiveSection('updates')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+        Updates
+        <span id="updates-badge" class="updates-dot hidden"></span>
       </button>
-    </nav>
+    </div>
 
-    <!-- Chat list -->
     <div id="chat-list" class="chat-list"></div>
-
-    <!-- Group list -->
     <div id="group-list" class="chat-list hidden"></div>
 
-    <!-- Sidebar footer -->
     <div class="sidebar-footer">
-      <div id="msg-counter-bar" class="msg-counter-bar">
-        <span id="msg-count-text">0 / 50 msgs today</span>
-        <div class="counter-track"><div id="counter-fill" class="counter-fill"></div></div>
+      <div class="msg-bar">
+        <span id="msg-count-text" class="msg-bar-text">0 / 50 msgs today</span>
+        <div class="msg-bar-track"><div id="counter-fill" class="msg-bar-fill"></div></div>
       </div>
       <div class="sidebar-user" onclick="openProfile()">
-        <div id="sidebar-avatar" class="avatar sm"></div>
+        <div id="sidebar-avatar" class="msg-av"></div>
         <div class="sidebar-user-info">
-          <span id="sidebar-name" class="sidebar-name"></span>
+          <span id="sidebar-name"></span>
           <span id="sidebar-tier" class="tier-badge free">Free</span>
         </div>
-        <div class="sidebar-actions">
-          <button class="icon-btn" onclick="event.stopPropagation(); openSettings()" title="Settings">
+        <div class="sidebar-user-actions">
+          <button class="icon-btn" onclick="event.stopPropagation();openSettings()" title="Settings">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
           </button>
-          <button class="icon-btn danger" onclick="event.stopPropagation(); doLogout()" title="Sign out">
+          <button class="icon-btn" onclick="event.stopPropagation();doLogout()" title="Sign out" style="color:var(--danger-text)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
           </button>
         </div>
@@ -103,36 +95,35 @@
     </div>
   </aside>
 
-  <!-- ── Main Area ─────────────────────────────────────── -->
+  <!-- Main -->
   <main class="main">
-
     <!-- Mobile topbar -->
-    <div class="mobile-topbar">
+    <div class="mobile-bar">
       <button class="icon-btn" onclick="openSidebar()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
-      <span class="mobile-title" id="mobile-title">NovaAI</span>
+      <span id="mobile-title" class="mobile-title">NovaAI</span>
       <button class="icon-btn" onclick="newChat()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
       </button>
     </div>
 
-    <!-- ── AI Chat Panel ── -->
+    <!-- AI Chat panel -->
     <div id="panel-chats" class="panel active">
       <div id="chat-header" class="chat-header hidden">
         <div class="chat-header-left">
-          <div id="chat-header-avatar" class="avatar sm"></div>
+          <div id="chat-header-avatar" class="msg-av"></div>
           <div>
-            <div id="chat-title-display" class="chat-title-display" ondblclick="startRename()"></div>
+            <div id="chat-title-display" class="chat-title" ondblclick="startRename()"></div>
             <input id="chat-title-input" class="chat-title-input hidden" onblur="finishRename()" onkeydown="if(event.key==='Enter')finishRename()"/>
           </div>
         </div>
-        <div class="chat-header-actions">
+        <div style="display:flex;gap:4px">
           <button class="icon-btn" onclick="startRename()" title="Rename">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           </button>
-          <button class="icon-btn danger" onclick="deleteCurrentChat()" title="Delete chat">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          <button class="icon-btn" style="color:var(--danger-text)" onclick="deleteCurrentChat()" title="Delete">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6M9 6V4h6v2"/></svg>
           </button>
         </div>
       </div>
@@ -140,318 +131,294 @@
       <div id="messages" class="messages"></div>
 
       <div id="welcome" class="welcome">
-        <div class="welcome-logo"><span class="logo-n">N</span></div>
+        <div class="welcome-logo">N</div>
         <h2>What can I help with?</h2>
-        <p>Ask anything, generate images, search the web, or upload files.</p>
+        <p>Chat, generate images, search the web, or upload files.</p>
         <div class="welcome-chips">
-          <button class="chip" onclick="setInput('Explain quantum computing simply')">⚛️ Explain quantum computing</button>
-          <button class="chip" onclick="setInput('Write a Python web scraper')">🐍 Write a Python scraper</button>
-          <button class="chip" onclick="setInput('🎨 Generate: a neon cyberpunk city at night'); setMode('imagine')">🎨 Generate an image</button>
-          <button class="chip" onclick="enableWebSearch(); setInput('What happened in the news today?')">🌐 Search the web</button>
+          <button class="chip" onclick="setInput('Explain how black holes work')">⚛️ Explain black holes</button>
+          <button class="chip" onclick="setMode('code');setInput('Write a Python web scraper')">🐍 Write Python code</button>
+          <button class="chip" onclick="setMode('imagine');setInput('a neon cyberpunk city at night')">🎨 Generate an image</button>
+          <button class="chip" onclick="setMode('search');setInput('What happened in the news today?')">🌐 Search the web</button>
         </div>
       </div>
 
-      <!-- Input area -->
       <div class="input-area">
-        <!-- File preview -->
         <div id="file-preview" class="file-preview hidden">
-          <div id="file-preview-inner" class="file-preview-inner"></div>
-          <button class="file-clear" onclick="clearFile()">✕</button>
+          <span id="file-preview-inner"></span>
+          <button onclick="clearFile()" class="file-clear">✕</button>
         </div>
 
-        <!-- Mode bar -->
         <div class="mode-bar">
-          <button class="mode-btn active" id="mode-normal" onclick="setMode('normal')" title="Normal">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            Normal
-          </button>
-          <button class="mode-btn" id="mode-code" onclick="setMode('code')" title="Code mode">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-            Code
-          </button>
-          <button class="mode-btn" id="mode-imagine" onclick="setMode('imagine')" title="Generate image">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-            Imagine
-          </button>
-          <button class="mode-btn" id="mode-search" onclick="setMode('search')" title="Web search">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-            Search
-          </button>
-          <button class="mode-btn" id="mode-creative" onclick="setMode('creative')" title="Creative writing">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
-            Creative
-          </button>
-          <div class="mode-spacer"></div>
-          <!-- Image counter -->
-          <div id="img-counter" class="img-counter">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-            <span id="img-count-text">3 left</span>
-          </div>
+          <button class="mode-btn active" id="mode-normal" onclick="setMode('normal')">💬 Normal</button>
+          <button class="mode-btn" id="mode-code" onclick="setMode('code')">💻 Code</button>
+          <button class="mode-btn" id="mode-imagine" onclick="setMode('imagine')">🎨 Imagine</button>
+          <button class="mode-btn" id="mode-search" onclick="setMode('search')">🌐 Search</button>
+          <button class="mode-btn" id="mode-creative" onclick="setMode('creative')">✨ Creative</button>
+          <span class="mode-spacer"></span>
+          <span id="img-counter" class="img-counter">🖼 <span id="img-count-text">3 imgs left</span></span>
         </div>
 
-        <div class="input-row">
-          <!-- File upload -->
-          <label class="icon-btn attach-btn" title="Attach file">
+        <div class="input-box">
+          <label class="attach-label" title="Attach file">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-            <input type="file" id="file-input" accept=".txt,.pdf,.md,.js,.py,.ts,.json,.csv,.html,.css,.xml" onchange="handleFileSelect(event)" style="display:none"/>
+            <input type="file" id="file-input" accept=".txt,.pdf,.md,.js,.py,.ts,.json,.csv,.html,.css" onchange="handleFileSelect(event)" style="display:none"/>
           </label>
-
           <textarea id="msg-input" class="msg-input" placeholder="Message NovaAI…" rows="1"
-            onkeydown="handleKey(event)" oninput="autoResize(event.target)"></textarea>
-
+            onkeydown="handleKey(event)" oninput="resizeInput(this)"></textarea>
           <button id="send-btn" class="send-btn" onclick="sendMessage()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
           </button>
         </div>
-        <div class="input-hint">NovaAI can make mistakes. Verify important info.</div>
+        <div class="input-hint">NovaAI can make mistakes. Double-check important info.</div>
       </div>
     </div>
 
-    <!-- ── Group Chats Panel ── -->
+    <!-- Groups panel -->
     <div id="panel-groups" class="panel">
-      <div class="panel-topbar">
+      <div class="panel-header">
         <h2>Group Chats</h2>
         <button class="btn-primary sm" onclick="openCreateGroup()">+ New Group</button>
       </div>
-      <div id="group-browser" class="group-browser">
-        <div class="empty-state">Select a group from the sidebar or create one.</div>
-      </div>
-      <!-- Active group chat -->
+      <div id="group-browser" class="group-browser"></div>
       <div id="group-chat-view" class="group-chat-view hidden">
         <div class="chat-header">
           <div class="chat-header-left">
             <button class="icon-btn" onclick="closeGroupChat()">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
             </button>
-            <div id="gc-avatar" class="avatar sm"></div>
+            <div id="gc-avatar" class="msg-av"></div>
             <div>
-              <div id="gc-title" class="chat-title-display"></div>
-              <div id="gc-members-count" class="chat-subtitle"></div>
+              <div id="gc-title" class="chat-title"></div>
+              <div id="gc-members-count" class="chat-sub"></div>
             </div>
           </div>
-          <button class="icon-btn" onclick="openGroupInfo()" title="Group info">
+          <button class="icon-btn" onclick="openGroupInfo()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
           </button>
         </div>
-        <div id="group-messages" class="messages group-msgs"></div>
-        <div class="group-input-area">
-          <textarea id="group-msg-input" class="msg-input" placeholder="Message group…" rows="1"
-            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendGroupMessage()}"
-            oninput="autoResize(event.target)"></textarea>
-          <button class="send-btn" onclick="sendGroupMessage()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-          </button>
+        <div id="group-messages" class="messages"></div>
+        <div class="input-area" style="border-top:1px solid var(--border)">
+          <div class="input-box">
+            <textarea id="group-msg-input" class="msg-input" placeholder="Message group…" rows="1"
+              onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendGroupMessage()}"
+              oninput="resizeInput(this)"></textarea>
+            <button class="send-btn" onclick="sendGroupMessage()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- ── Update Log Panel ── -->
+    <!-- Updates panel -->
     <div id="panel-updates" class="panel">
-      <div class="panel-topbar">
+      <div class="panel-header">
         <h2>Update Log</h2>
         <button id="post-update-btn" class="btn-primary sm hidden" onclick="openPostUpdate()">+ Post Update</button>
       </div>
-      <div id="update-log-list" class="update-log-list">
-        <div class="empty-state">No updates posted yet.</div>
-      </div>
+      <div id="update-log-list" class="update-list"></div>
     </div>
-
   </main>
 </div>
 
-<!-- ── Modals ──────────────────────────────────────────── -->
+<!-- ── Modals ──────────────────────────────────────────────── -->
 
-<!-- Limit modal -->
-<div id="limit-modal" class="modal-overlay hidden">
+<div id="limit-modal" class="overlay hidden">
   <div class="modal sm">
-    <div class="modal-icon limit">⏳</div>
+    <div class="modal-icon">⏳</div>
     <h3>Daily Limit Reached</h3>
-    <p>You've used all 50 messages for today. Resets in <strong id="limit-reset-time"></strong>.</p>
-    <p class="muted">Upgrade to Pro for priority access.</p>
+    <p>You've used all 50 messages today. Resets in <strong id="limit-reset-time"></strong>.</p>
+    <p class="modal-sub">Upgrade to Pro for more access.</p>
     <button class="btn-primary" onclick="closeModal('limit-modal')">Got it</button>
   </div>
 </div>
 
-<!-- Image limit modal -->
-<div id="img-limit-modal" class="modal-overlay hidden">
+<div id="img-limit-modal" class="overlay hidden">
   <div class="modal sm">
     <div class="modal-icon">🎨</div>
     <h3>Image Limit Reached</h3>
-    <p id="img-limit-text">You've used all 3 free image generations today. Resets in <strong id="img-limit-reset"></strong>.</p>
-    <p class="muted">Pro users get 10 images per day.</p>
+    <p>Resets in <strong id="img-limit-reset"></strong>.</p>
+    <p class="modal-sub">Pro users get 10 images/day.</p>
     <button class="btn-primary" onclick="closeModal('img-limit-modal')">Got it</button>
   </div>
 </div>
 
-<!-- Profile modal -->
-<div id="profile-modal" class="modal-overlay hidden" onclick="if(event.target===this)closeModal('profile-modal')">
+<div id="profile-modal" class="overlay hidden" onclick="if(event.target===this)closeModal('profile-modal')">
   <div class="modal">
-    <div class="modal-header"><h3>Your Profile</h3><button class="modal-close" onclick="closeModal('profile-modal')">✕</button></div>
-    <div class="profile-avatar-section">
-      <div id="profile-avatar-preview" class="avatar lg" onclick="document.getElementById('avatar-upload').click()"></div>
+    <div class="modal-head"><h3>Profile</h3><button class="modal-x" onclick="closeModal('profile-modal')">✕</button></div>
+    <div class="avatar-section">
+      <div id="profile-avatar-preview" class="msg-av lg" onclick="document.getElementById('avatar-upload').click()"></div>
       <input id="avatar-upload" type="file" accept="image/*" onchange="uploadAvatar(event)" style="display:none"/>
       <button class="btn-secondary sm" onclick="document.getElementById('avatar-upload').click()">Upload Photo</button>
     </div>
     <label class="form-label">Colour</label>
     <div id="color-picker" class="color-picker"></div>
     <label class="form-label">Display Name</label>
-    <input id="profile-name-input" class="form-input" type="text" placeholder="Your name"/>
-    <div class="modal-footer">
+    <input id="profile-name-input" class="form-input" type="text"/>
+    <div class="modal-foot">
       <button class="btn-secondary" onclick="closeModal('profile-modal')">Cancel</button>
-      <button class="btn-primary" onclick="saveProfile()">Save Changes</button>
+      <button class="btn-primary" onclick="saveProfile()">Save</button>
     </div>
   </div>
 </div>
 
-<!-- Create Group modal -->
-<div id="create-group-modal" class="modal-overlay hidden" onclick="if(event.target===this)closeModal('create-group-modal')">
+<div id="create-group-modal" class="overlay hidden" onclick="if(event.target===this)closeModal('create-group-modal')">
   <div class="modal">
-    <div class="modal-header"><h3>New Group Chat</h3><button class="modal-close" onclick="closeModal('create-group-modal')">✕</button></div>
+    <div class="modal-head"><h3>New Group Chat</h3><button class="modal-x" onclick="closeModal('create-group-modal')">✕</button></div>
     <label class="form-label">Group Name</label>
     <input id="group-name-input" class="form-input" type="text" placeholder="e.g. Dev Team"/>
-    <label class="form-label">Description (optional)</label>
-    <input id="group-desc-input" class="form-input" type="text" placeholder="What's this group for?"/>
-    <label class="form-label">Group Colour</label>
+    <label class="form-label">Description</label>
+    <input id="group-desc-input" class="form-input" type="text" placeholder="Optional"/>
+    <label class="form-label">Colour</label>
     <div id="group-color-picker" class="color-picker"></div>
-    <div class="modal-footer">
+    <div class="modal-foot">
       <button class="btn-secondary" onclick="closeModal('create-group-modal')">Cancel</button>
-      <button class="btn-primary" onclick="createGroup()">Create Group</button>
+      <button class="btn-primary" onclick="createGroup()">Create</button>
     </div>
   </div>
 </div>
 
-<!-- Group Info modal -->
-<div id="group-info-modal" class="modal-overlay hidden" onclick="if(event.target===this)closeModal('group-info-modal')">
+<div id="group-info-modal" class="overlay hidden" onclick="if(event.target===this)closeModal('group-info-modal')">
   <div class="modal">
-    <div class="modal-header"><h3 id="gi-title">Group Info</h3><button class="modal-close" onclick="closeModal('group-info-modal')">✕</button></div>
+    <div class="modal-head"><h3 id="gi-title">Group Info</h3><button class="modal-x" onclick="closeModal('group-info-modal')">✕</button></div>
     <div id="gi-members-list" class="members-list"></div>
-    <div id="gi-invite-section" class="gi-invite">
-      <label class="form-label">Invite by Username</label>
-      <div class="input-row-flat">
-        <input id="gi-invite-input" class="form-input" type="text" placeholder="username"/>
-        <button class="btn-primary sm" onclick="inviteMember()">Invite</button>
-      </div>
+    <label class="form-label">Invite by Username</label>
+    <div style="display:flex;gap:8px">
+      <input id="gi-invite-input" class="form-input" type="text" placeholder="username" style="flex:1;margin:0"/>
+      <button class="btn-primary sm" onclick="inviteMember()">Invite</button>
     </div>
-    <div class="modal-footer">
+    <div class="modal-foot">
       <button class="btn-danger" onclick="leaveGroup()">Leave Group</button>
       <button class="btn-secondary" onclick="closeModal('group-info-modal')">Close</button>
     </div>
   </div>
 </div>
 
-<!-- Post Update modal (admin) -->
-<div id="post-update-modal" class="modal-overlay hidden" onclick="if(event.target===this)closeModal('post-update-modal')">
+<div id="post-update-modal" class="overlay hidden" onclick="if(event.target===this)closeModal('post-update-modal')">
   <div class="modal">
-    <div class="modal-header"><h3>Post Update</h3><button class="modal-close" onclick="closeModal('post-update-modal')">✕</button></div>
+    <div class="modal-head"><h3>Post Update</h3><button class="modal-x" onclick="closeModal('post-update-modal')">✕</button></div>
     <label class="form-label">Version (optional)</label>
     <input id="update-version" class="form-input" type="text" placeholder="e.g. v2.1.0"/>
     <label class="form-label">Title</label>
     <input id="update-title" class="form-input" type="text" placeholder="What's new?"/>
     <label class="form-label">Content</label>
-    <textarea id="update-content" class="form-input" rows="6" placeholder="Describe the update… supports markdown"></textarea>
-    <div class="modal-footer">
+    <textarea id="update-content" class="form-input" rows="6" placeholder="Describe the changes…"></textarea>
+    <div class="modal-foot">
       <button class="btn-secondary" onclick="closeModal('post-update-modal')">Cancel</button>
-      <button class="btn-primary" onclick="postUpdate()">Post Update</button>
+      <button class="btn-primary" onclick="postUpdate()">Post</button>
     </div>
   </div>
 </div>
 
-<!-- Admin modal -->
-<div id="admin-modal" class="modal-overlay hidden" onclick="if(event.target===this)closeModal('admin-modal')">
+<div id="admin-modal" class="overlay hidden" onclick="if(event.target===this)closeModal('admin-modal')">
   <div class="modal wide">
-    <div class="modal-header"><h3>⚡ Admin Panel</h3><button class="modal-close" onclick="closeModal('admin-modal')">✕</button></div>
-    <div id="admin-user-list" class="admin-user-list"><div class="empty-state">Loading…</div></div>
+    <div class="modal-head"><h3>⚡ Admin Panel</h3><button class="modal-x" onclick="closeModal('admin-modal')">✕</button></div>
+    <div id="admin-user-list"></div>
   </div>
 </div>
 
-<!-- Settings modal -->
-<div id="settings-modal" class="modal-overlay hidden" onclick="if(event.target===this)closeModal('settings-modal')">
+<div id="settings-modal" class="overlay hidden" onclick="if(event.target===this)closeModal('settings-modal')">
   <div class="modal wide settings-modal">
-    <div class="modal-header"><h3>Settings</h3><button class="modal-close" onclick="closeModal('settings-modal')">✕</button></div>
+    <div class="modal-head"><h3>Settings</h3><button class="modal-x" onclick="closeModal('settings-modal')">✕</button></div>
     <div class="settings-layout">
       <nav class="settings-nav">
-        <button class="settings-tab active" onclick="switchSettings('appearance')">🎨 Appearance</button>
-        <button class="settings-tab" onclick="switchSettings('ai')">🤖 AI</button>
-        <button class="settings-tab" onclick="switchSettings('data')">💾 Data</button>
-        <button class="settings-tab" onclick="switchSettings('account')">🔐 Account</button>
-        <button id="settings-admin-tab" class="settings-tab hidden" onclick="switchSettings('admin')">⚡ Admin</button>
+        <button class="settings-tab active" data-pane="appearance" onclick="switchSettings('appearance')">🎨 Appearance</button>
+        <button class="settings-tab" data-pane="ai" onclick="switchSettings('ai')">🤖 AI</button>
+        <button class="settings-tab" data-pane="data" onclick="switchSettings('data')">💾 Data</button>
+        <button class="settings-tab" data-pane="account" onclick="switchSettings('account')">🔐 Account</button>
+        <button id="settings-admin-tab" class="settings-tab hidden" data-pane="admin" onclick="switchSettings('admin')">⚡ Admin</button>
       </nav>
-      <div class="settings-content">
-        <!-- Appearance -->
+      <div class="settings-body">
         <div id="settings-appearance" class="settings-pane active">
-          <h4>Theme</h4>
-          <div class="seg-ctrl">
-            <button onclick="setTheme('dark')" id="theme-dark">Dark</button>
-            <button onclick="setTheme('light')" id="theme-light">Light</button>
-            <button onclick="setTheme('midnight')" id="theme-midnight">Midnight</button>
+          <div class="setting-group">
+            <div class="setting-label">Theme</div>
+            <div class="seg">
+              <button data-seg="theme" data-val="dark" onclick="setTheme('dark')">Dark</button>
+              <button data-seg="theme" data-val="light" onclick="setTheme('light')">Light</button>
+              <button data-seg="theme" data-val="midnight" onclick="setTheme('midnight')">Midnight</button>
+            </div>
           </div>
-          <h4>Font Size</h4>
-          <div class="seg-ctrl">
-            <button onclick="setFontSize('sm')" id="fs-sm">Small</button>
-            <button onclick="setFontSize('md')" id="fs-md">Medium</button>
-            <button onclick="setFontSize('lg')" id="fs-lg">Large</button>
+          <div class="setting-group">
+            <div class="setting-label">Font Size</div>
+            <div class="seg">
+              <button data-seg="fs" data-val="sm" onclick="setFontSize('sm')">Small</button>
+              <button data-seg="fs" data-val="md" onclick="setFontSize('md')">Medium</button>
+              <button data-seg="fs" data-val="lg" onclick="setFontSize('lg')">Large</button>
+            </div>
           </div>
-          <h4>Message Density</h4>
-          <div class="seg-ctrl">
-            <button onclick="setDensity('compact')" id="density-compact">Compact</button>
-            <button onclick="setDensity('comfortable')" id="density-comfortable">Comfortable</button>
-            <button onclick="setDensity('spacious')" id="density-spacious">Spacious</button>
+          <div class="setting-group">
+            <div class="setting-label">Message Density</div>
+            <div class="seg">
+              <button data-seg="density" data-val="compact" onclick="setDensity('compact')">Compact</button>
+              <button data-seg="density" data-val="comfortable" onclick="setDensity('comfortable')">Normal</button>
+              <button data-seg="density" data-val="spacious" onclick="setDensity('spacious')">Spacious</button>
+            </div>
           </div>
         </div>
-        <!-- AI -->
         <div id="settings-ai" class="settings-pane">
-          <h4>Response Style</h4>
-          <div class="seg-ctrl">
-            <button onclick="setStyle('concise')" id="style-concise">Concise</button>
-            <button onclick="setStyle('balanced')" id="style-balanced">Balanced</button>
-            <button onclick="setStyle('detailed')" id="style-detailed">Detailed</button>
-            <button onclick="setStyle('creative')" id="style-creative">Creative</button>
+          <div class="setting-group">
+            <div class="setting-label">Response Style</div>
+            <div class="seg">
+              <button data-seg="style" data-val="concise" onclick="setStyle('concise')">Concise</button>
+              <button data-seg="style" data-val="balanced" onclick="setStyle('balanced')">Balanced</button>
+              <button data-seg="style" data-val="detailed" onclick="setStyle('detailed')">Detailed</button>
+              <button data-seg="style" data-val="creative" onclick="setStyle('creative')">Creative</button>
+            </div>
           </div>
-          <h4>Language</h4>
-          <select class="form-input" id="ai-language" onchange="saveSetting('language', this.value)">
-            <option value="en-AU">English (AU)</option>
-            <option value="en-US">English (US)</option>
-            <option value="en-GB">English (UK)</option>
-            <option value="es">Spanish</option>
-            <option value="fr">French</option>
-            <option value="de">German</option>
-            <option value="ja">Japanese</option>
-            <option value="zh">Chinese</option>
-          </select>
-          <h4>Custom System Prompt</h4>
-          <textarea class="form-input" id="custom-prompt" rows="4" placeholder="Add extra instructions for NovaAI…" onchange="saveSetting('customPrompt', this.value)"></textarea>
+          <div class="setting-group">
+            <div class="setting-label">Language</div>
+            <select class="form-input" id="ai-language" onchange="saveSetting('language',this.value)">
+              <option value="en-AU">English (AU)</option>
+              <option value="en-US">English (US)</option>
+              <option value="en-GB">English (UK)</option>
+              <option value="es">Spanish</option>
+              <option value="fr">French</option>
+              <option value="de">German</option>
+              <option value="ja">Japanese</option>
+              <option value="zh">Chinese</option>
+            </select>
+          </div>
+          <div class="setting-group">
+            <div class="setting-label">Custom System Prompt</div>
+            <textarea class="form-input" id="custom-prompt" rows="4" placeholder="Extra instructions for NovaAI…" onchange="saveSetting('customPrompt',this.value)"></textarea>
+          </div>
         </div>
-        <!-- Data -->
         <div id="settings-data" class="settings-pane">
-          <h4>Export Chats</h4>
-          <button class="btn-secondary" onclick="exportChats()">Export as JSON</button>
-          <h4>Import Chats</h4>
-          <label class="btn-secondary" style="cursor:pointer">
-            Import JSON
-            <input type="file" accept=".json" onchange="importChats(event)" style="display:none"/>
-          </label>
-          <h4>Danger Zone</h4>
-          <button class="btn-danger" onclick="clearAllChats()">Delete All Chats</button>
+          <div class="setting-group">
+            <div class="setting-label">Export Chats</div>
+            <button class="btn-secondary" onclick="exportChats()">Export JSON</button>
+          </div>
+          <div class="setting-group">
+            <div class="setting-label">Import Chats</div>
+            <label class="btn-secondary" style="cursor:pointer;display:inline-block">Import JSON<input type="file" accept=".json" onchange="importChats(event)" style="display:none"/></label>
+          </div>
+          <div class="setting-group">
+            <div class="setting-label">Danger Zone</div>
+            <button class="btn-danger" onclick="clearAllChats()">Delete All Chats</button>
+          </div>
         </div>
-        <!-- Account -->
         <div id="settings-account" class="settings-pane">
-          <h4>Change Password</h4>
-          <input class="form-input" id="new-password" type="password" placeholder="New password"/>
-          <button class="btn-secondary" onclick="changePassword()">Update Password</button>
-          <h4>Delete Account</h4>
-          <button class="btn-danger" onclick="deleteAccount()">Delete My Account</button>
+          <div class="setting-group">
+            <div class="setting-label">Change Password</div>
+            <input class="form-input" id="new-password" type="password" placeholder="New password"/>
+            <button class="btn-secondary" style="margin-top:8px" onclick="changePassword()">Update Password</button>
+          </div>
+          <div class="setting-group">
+            <div class="setting-label">Delete Account</div>
+            <button class="btn-danger" onclick="deleteAccount()">Delete My Account</button>
+          </div>
         </div>
-        <!-- Admin -->
         <div id="settings-admin" class="settings-pane">
-          <h4>Admin Panel</h4>
-          <button class="btn-primary" onclick="closeModal('settings-modal'); openAdmin()">Open Admin Panel</button>
+          <div class="setting-group">
+            <div class="setting-label">Admin Panel</div>
+            <button class="btn-primary" onclick="closeModal('settings-modal');openAdmin()">Open Admin Panel</button>
+          </div>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Toast -->
 <div id="toast" class="toast hidden"></div>
 
 <script src="app.js"></script>
