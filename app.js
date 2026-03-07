@@ -253,15 +253,33 @@ function appendImageMessage(src) {
   el.scrollTop = el.scrollHeight;
 }
 
-function showTyping() {
+function showTyping(statusText) {
+  hideTyping();
   const el = document.getElementById('messages');
+  document.getElementById('welcome').style.display = 'none';
   const div = document.createElement('div');
-  div.className = 'message ai'; div.id = 'typing-indicator';
-  div.innerHTML = `<div class="avatar sm msg-avatar" style="background:linear-gradient(135deg,#7c3aed,#3b82f6);font-size:11px;font-weight:800">N</div>
-    <div class="msg-body"><div class="typing-dots"><span></span><span></span><span></span></div></div>`;
+  div.className = 'message ai typing-message'; div.id = 'typing-indicator';
+  div.innerHTML = `
+    <div class="avatar sm msg-avatar" style="background:linear-gradient(135deg,#7c3aed,#3b82f6);font-size:11px;font-weight:800">N</div>
+    <div class="msg-body">
+      <div class="typing-status" id="typing-status">${statusText || 'Thinking…'}</div>
+      <div class="typing-dots"><span></span><span></span><span></span></div>
+    </div>`;
   el.appendChild(div); el.scrollTop = el.scrollHeight;
 }
+function updateTypingStatus(text) {
+  const el = document.getElementById('typing-status');
+  if (el) el.textContent = text;
+}
 function hideTyping() { document.getElementById('typing-indicator')?.remove(); }
+
+function setLoading(on) {
+  const btn = document.getElementById('send-btn');
+  const input = document.getElementById('msg-input');
+  btn.disabled = on;
+  input.disabled = on;
+  btn.style.opacity = on ? '0.5' : '1';
+}
 
 // ── Send message ───────────────────────────────────────────
 async function sendMessage() {
@@ -288,7 +306,18 @@ async function sendMessage() {
   appendMessage('user', userContent);
   if (!CURRENT_CHAT_ID) await createNewChat(userContent);
   await SB.from('ai_messages').insert({ chat_id: CURRENT_CHAT_ID, role: 'user', content: userContent });
-  showTyping();
+
+  const isSearch = CURRENT_MODE === 'search';
+  setLoading(true);
+  showTyping(isSearch ? 'Searching the web…' : 'Thinking…');
+
+  // If search mode, update status after a moment to show it's still working
+  let statusTimer = null;
+  if (isSearch) {
+    statusTimer = setTimeout(() => updateTypingStatus('Reading results…'), 3000);
+  } else {
+    statusTimer = setTimeout(() => updateTypingStatus('Writing response…'), 4000);
+  }
 
   const sysPrompt = buildSystemPrompt();
   const history = (CHAT_MESSAGES[CURRENT_CHAT_ID] || []).slice(-20).map(m => ({ role: m.role, content: m.content }));
@@ -300,13 +329,15 @@ async function sendMessage() {
       headers: { 'Content-Type': 'application/json', 'X-User-Token': SESSION_TOKEN },
       body: JSON.stringify({
         messages: [{ role: 'system', content: sysPrompt }, ...history],
-        useWebSearch: CURRENT_MODE === 'search',
+        useWebSearch: isSearch,
         temperature: CURRENT_MODE === 'creative' ? 1.1 : 0.7,
         max_tokens: SETTINGS.style === 'detailed' ? 4096 : 2048
       })
     });
+    clearTimeout(statusTimer);
     const data = await res.json();
     hideTyping();
+    setLoading(false);
     if (data.error === 'limit_reached') {
       document.getElementById('limit-reset-time').textContent = data.resetIn;
       document.getElementById('limit-modal').classList.remove('hidden');
@@ -323,7 +354,12 @@ async function sendMessage() {
       await SB.from('ai_chats').update({ last_message: reply.slice(0, 80), updated_at: new Date().toISOString() }).eq('id', CURRENT_CHAT_ID);
       await loadChats();
     }
-  } catch(e) { hideTyping(); showToast('Network error', 'error'); }
+  } catch(e) {
+    clearTimeout(statusTimer);
+    hideTyping();
+    setLoading(false);
+    showToast('Network error — please try again', 'error');
+  }
 }
 
 function buildSystemPrompt() {
@@ -407,15 +443,19 @@ async function generateImage(prompt) {
   }
   appendMessage('user', '🎨 Generate: ' + prompt);
   if (!CURRENT_CHAT_ID) await createNewChat('Image: ' + prompt);
-  showTyping();
+  setLoading(true);
+  showTyping('Generating image…');
+  const imgTimer = setTimeout(() => updateTypingStatus('Still working — image gen can take 15–30s…'), 8000);
   try {
     const res = await fetch('/api/imagine', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-User-Token': SESSION_TOKEN },
       body: JSON.stringify({ prompt })
     });
+    clearTimeout(imgTimer);
     const data = await res.json();
     hideTyping();
+    setLoading(false);
     if (data.error === 'img_limit_reached') {
       document.getElementById('img-limit-reset').textContent = data.resetIn;
       document.getElementById('img-limit-text').textContent = `You've used all ${data.limit} image generations today.`;
@@ -430,7 +470,7 @@ async function generateImage(prompt) {
       { chat_id: CURRENT_CHAT_ID, role: 'user', content: '🎨 Generate: ' + prompt },
       { chat_id: CURRENT_CHAT_ID, role: 'assistant', content: '[Generated Image]' }
     ]);
-  } catch(e) { hideTyping(); showToast('Image generation failed', 'error'); }
+  } catch(e) { clearTimeout(imgTimer); hideTyping(); setLoading(false); showToast('Image generation failed', 'error'); }
 }
 
 // ── File handling ──────────────────────────────────────────
@@ -462,22 +502,26 @@ async function handleFileAnalysis(question) {
   const display = `📎 ${file.name}${question ? '\n' + question : ''}`;
   appendMessage('user', display);
   if (!CURRENT_CHAT_ID) await createNewChat(`Analyse: ${file.name}`);
-  showTyping();
+  setLoading(true);
+  showTyping('Reading file…');
+  const fileTimer = setTimeout(() => updateTypingStatus('Analysing…'), 3000);
   try {
     const res = await fetch('/api/analyse-file', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-User-Token': SESSION_TOKEN },
       body: JSON.stringify({ fileContent: file.content, fileName: file.name, userQuestion: question })
     });
+    clearTimeout(fileTimer);
     const data = await res.json();
     hideTyping();
+    setLoading(false);
     if (data.error) { showToast(data.error, 'error'); return; }
     appendMessage('assistant', data.reply);
     await SB.from('ai_messages').insert([
       { chat_id: CURRENT_CHAT_ID, role: 'user', content: display },
       { chat_id: CURRENT_CHAT_ID, role: 'assistant', content: data.reply }
     ]);
-  } catch(e) { hideTyping(); showToast('File analysis failed', 'error'); }
+  } catch(e) { clearTimeout(fileTimer); hideTyping(); setLoading(false); showToast('File analysis failed', 'error'); }
 }
 
 // ── Group Chats ────────────────────────────────────────────
