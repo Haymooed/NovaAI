@@ -85,6 +85,10 @@
     </div>
     <div class="sb-bottom">
       <div id="msg-counter" class="msg-counter"></div>
+      <button class="settings-sb-btn" onclick="openSettings()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Settings
+      </button>
       <button id="admin-sidebar-btn" class="admin-sb-btn hidden" onclick="openAdmin()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
         Admin Panel
@@ -186,6 +190,129 @@
     </div>
     <input class="m-input" id="admin-search" placeholder="Search users…" oninput="filterAdminUsers()"/>
     <div id="admin-user-list"></div>
+  </div>
+</div>
+
+
+<!-- SETTINGS MODAL -->
+<div class="modal-bg" id="settings-modal" onclick="if(event.target===this)closeSettings()">
+  <div class="modal settings-modal">
+    <div class="modal-head">
+      <h3>⚙ Settings</h3>
+      <button class="modal-x" onclick="closeSettings()"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <!-- TABS -->
+    <div class="stab-bar">
+      <button class="stab-btn on" data-tab="appearance" onclick="showSettingsTab('appearance')">Appearance</button>
+      <button class="stab-btn" data-tab="ai" onclick="showSettingsTab('ai')">AI</button>
+      <button class="stab-btn" data-tab="data" onclick="showSettingsTab('data')">Data</button>
+      <button class="stab-btn" data-tab="account" onclick="showSettingsTab('account')">Account</button>
+    </div>
+
+    <!-- APPEARANCE -->
+    <div class="stab-panel" data-panel="appearance">
+      <div class="sgroup">
+        <div class="sgroup-label">Theme</div>
+        <div class="seg-ctrl">
+          <button class="seg-btn" data-setting="theme" data-value="dark" onclick="pickSetting('theme','dark')">Dark</button>
+          <button class="seg-btn" data-setting="theme" data-value="light" onclick="pickSetting('theme','light')">Light</button>
+          <button class="seg-btn" data-setting="theme" data-value="midnight" onclick="pickSetting('theme','midnight')">Midnight</button>
+        </div>
+      </div>
+      <div class="sgroup">
+        <div class="sgroup-label">Font Size</div>
+        <div class="seg-ctrl">
+          <button class="seg-btn" data-setting="fontSize" data-value="small" onclick="pickSetting('fontSize','small')">Small</button>
+          <button class="seg-btn" data-setting="fontSize" data-value="medium" onclick="pickSetting('fontSize','medium')">Medium</button>
+          <button class="seg-btn" data-setting="fontSize" data-value="large" onclick="pickSetting('fontSize','large')">Large</button>
+        </div>
+      </div>
+      <div class="sgroup">
+        <div class="sgroup-label">Message Density</div>
+        <div class="seg-ctrl">
+          <button class="seg-btn" data-setting="density" data-value="compact" onclick="pickSetting('density','compact')">Compact</button>
+          <button class="seg-btn" data-setting="density" data-value="comfortable" onclick="pickSetting('density','comfortable')">Comfortable</button>
+          <button class="seg-btn" data-setting="density" data-value="spacious" onclick="pickSetting('density','spacious')">Spacious</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI PREFERENCES -->
+    <div class="stab-panel hidden" data-panel="ai">
+      <div class="sgroup">
+        <div class="sgroup-label">Response Style</div>
+        <div class="seg-ctrl two-row">
+          <button class="seg-btn" data-setting="responseStyle" data-value="concise" onclick="pickSetting('responseStyle','concise')">Concise</button>
+          <button class="seg-btn" data-setting="responseStyle" data-value="balanced" onclick="pickSetting('responseStyle','balanced')">Balanced</button>
+          <button class="seg-btn" data-setting="responseStyle" data-value="detailed" onclick="pickSetting('responseStyle','detailed')">Detailed</button>
+          <button class="seg-btn" data-setting="responseStyle" data-value="creative" onclick="pickSetting('responseStyle','creative')">Creative</button>
+        </div>
+      </div>
+      <div class="sgroup">
+        <div class="sgroup-label">Language</div>
+        <select class="m-input" id="setting-lang" style="margin-bottom:0">
+          <option>English</option><option>Spanish</option><option>French</option>
+          <option>German</option><option>Portuguese</option><option>Italian</option>
+          <option>Dutch</option><option>Russian</option><option>Japanese</option>
+          <option>Chinese</option><option>Korean</option><option>Arabic</option>
+          <option>Hindi</option><option>Turkish</option><option>Polish</option>
+        </select>
+      </div>
+      <div class="sgroup">
+        <div class="sgroup-label">Custom System Prompt <span style="color:var(--text3);font-weight:400">(optional)</span></div>
+        <textarea id="setting-system-prompt" class="s-textarea" placeholder="e.g. Always respond with bullet points. Be sarcastic. Pretend you're a pirate."></textarea>
+      </div>
+      <button class="m-btn" onclick="saveAISettings()">Save AI Preferences</button>
+    </div>
+
+    <!-- DATA & PRIVACY -->
+    <div class="stab-panel hidden" data-panel="data">
+      <div class="sgroup">
+        <div class="sgroup-label">Export</div>
+        <div class="sgroup-desc">Download all your chats as a JSON file.</div>
+        <button class="m-btn" id="export-btn" onclick="exportChats()">Export All Chats</button>
+      </div>
+      <div class="sgroup">
+        <div class="sgroup-label">Import</div>
+        <div class="sgroup-desc">Import chats from NovaAI, ChatGPT, or Claude exports.</div>
+        <label class="m-btn import-label">
+          Choose File
+          <input type="file" accept=".json" style="display:none" onchange="importChats(this)"/>
+        </label>
+        <div id="import-status" class="import-status" style="margin-top:8px"></div>
+      </div>
+      <div class="sgroup danger-zone">
+        <div class="sgroup-label" style="color:var(--red)">Danger Zone</div>
+        <div class="sgroup-desc">Permanently delete all your chat history.</div>
+        <button class="danger-btn" onclick="clearAllChats()">Clear All Chats</button>
+      </div>
+    </div>
+
+    <!-- ACCOUNT -->
+    <div class="stab-panel hidden" data-panel="account">
+      <div class="sgroup">
+        <div class="sgroup-label">Change Password</div>
+        <input class="m-input" id="curr-pass" type="password" placeholder="Current password"/>
+        <input class="m-input" id="new-pass" type="password" placeholder="New password (6+ chars)"/>
+        <input class="m-input" id="conf-pass" type="password" placeholder="Confirm new password"/>
+        <div class="s-feedback hidden" id="pass-err" style="color:var(--red)"></div>
+        <div class="s-feedback hidden" id="pass-ok" style="color:var(--green)">✓ Password updated!</div>
+        <button class="m-btn" onclick="changePassword()">Update Password</button>
+      </div>
+      <div class="sgroup">
+        <div class="sgroup-label">Change Email</div>
+        <div class="sgroup-desc">A confirmation will be sent to your new email.</div>
+        <input class="m-input" id="new-email" type="email" placeholder="New email address"/>
+        <div class="s-feedback hidden" id="email-err" style="color:var(--red)"></div>
+        <div class="s-feedback hidden" id="email-ok" style="color:var(--green)">✓ Confirmation sent!</div>
+        <button class="m-btn" onclick="changeEmail()">Update Email</button>
+      </div>
+      <div class="sgroup danger-zone">
+        <div class="sgroup-label" style="color:var(--red)">Danger Zone</div>
+        <div class="sgroup-desc">Permanently delete your account and all data.</div>
+        <button class="danger-btn" onclick="deleteAccount()">Delete Account</button>
+      </div>
+    </div>
   </div>
 </div>
 
