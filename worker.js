@@ -181,10 +181,16 @@ export default {
           return json({ error: 'Image generation failed: ' + errText }, 500);
         }
 
-        // Returns image bytes — convert to base64
+        // Returns image bytes — convert to base64 safely (no spread = no stack overflow)
         const imgBytes = await imgRes.arrayBuffer();
         if (!imgBytes.byteLength) return json({ error: 'Empty image returned. Try again.' }, 500);
-        const base64 = btoa(String.fromCharCode(...new Uint8Array(imgBytes)));
+        const uint8 = new Uint8Array(imgBytes);
+        let binary = '';
+        const chunkSize = 8192;
+        for (let i = 0; i < uint8.length; i += chunkSize) {
+          binary += String.fromCharCode(...uint8.subarray(i, i + chunkSize));
+        }
+        const base64 = btoa(binary);
 
         // Update image count
         await patchProfile(user.id, {
