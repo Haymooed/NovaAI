@@ -355,7 +355,7 @@ async function sendMessage() {
     if (!CHAT_MESSAGES[CURRENT_CHAT_ID]) CHAT_MESSAGES[CURRENT_CHAT_ID] = [];
     CHAT_MESSAGES[CURRENT_CHAT_ID].push({ role: 'user', content: text }, { role: 'assistant', content: reply });
     await SB.from('ai_messages').insert({ chat_id: CURRENT_CHAT_ID, role: 'assistant', content: reply });
-    await SB.from('ai_chats').update({ last_message: reply.slice(0,80), updated_at: new Date().toISOString() }).eq('id', CURRENT_CHAT_ID);
+    await SB.from('ai_chats').update({ last_message: reply.slice(0,80) }).eq('id', CURRENT_CHAT_ID);
     loadChats();
   } catch(e) {
     clearTimeout(t1);
@@ -374,10 +374,12 @@ function buildSysPrompt() {
 
 async function createChat(firstMsg) {
   const title = (firstMsg || 'New Chat').slice(0, 50);
-  const { data, error } = await SB.from('ai_chats').insert({ user_id: ME.id, title, last_message: '' }).select().single();
+  // Only insert columns guaranteed to exist
+  const { data, error } = await SB.from('ai_chats').insert({ user_id: ME.id, title }).select().single();
   if (error || !data) {
-    console.error('createChat error:', error);
-    showToast('DB error: ' + (error?.message || 'Could not create chat. Check Supabase RLS.'), 'error');
+    const msg = error?.message || error?.hint || JSON.stringify(error) || 'unknown';
+    console.error('createChat error:', msg, error);
+    showToast('Chat error: ' + msg, 'error');
     return false;
   }
   CURRENT_CHAT_ID = data.id;
