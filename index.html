@@ -168,12 +168,12 @@
             <input type="file" id="file-input" accept=".txt,.pdf,.md,.js,.py,.ts,.json,.csv,.html,.css" onchange="handleFileSelect(event)" style="display:none"/>
           </label>
           <textarea id="msg-input" class="msg-input" placeholder="Message NovaAI…" rows="1"
-            onkeydown="handleKey(event)" oninput="resizeInput(this)"></textarea>
+            onkeydown="handleKey(event)" oninput="updateCharCount(this)"></textarea>
           <button id="send-btn" class="send-btn" onclick="sendMessage()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
           </button>
         </div>
-        <div class="input-hint">NovaAI can make mistakes. Double-check important info.</div>
+        <div class="input-hint"><span id="char-count" style="margin-right:8px"></span>NovaAI can make mistakes. Double-check important info. &nbsp;·&nbsp; Ctrl+N new chat &nbsp;·&nbsp; Ctrl+K focus</div>
       </div>
     </div>
 
