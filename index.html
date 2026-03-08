@@ -326,9 +326,42 @@
 </div>
 
 <div id="admin-modal" class="overlay hidden" onclick="if(event.target===this)closeModal('admin-modal')">
-  <div class="modal wide">
-    <div class="modal-head"><h3>⚡ Admin Panel</h3><button class="modal-x" onclick="closeModal('admin-modal')">✕</button></div>
-    <div id="admin-user-list"></div>
+  <div class="modal admin-modal-wide">
+    <div class="modal-head">
+      <h3>⚡ Admin Panel</h3>
+      <button class="modal-x" onclick="closeModal('admin-modal')">✕</button>
+    </div>
+    <div class="admin-tabs">
+      <button class="admin-tab active" data-tab="site" onclick="switchAdminTab('site')">🌐 Site</button>
+      <button class="admin-tab" data-tab="limits" onclick="switchAdminTab('limits')">📊 Limits</button>
+      <button class="admin-tab" data-tab="banner" onclick="switchAdminTab('banner')">📢 Banner</button>
+      <button class="admin-tab" data-tab="users" onclick="switchAdminTab('users')">👥 Users</button>
+    </div>
+
+    <!-- Site Controls -->
+    <div id="admin-pane-site" class="admin-pane active">
+      <div id="admin-site-status"></div>
+      <div id="admin-site-controls"></div>
+    </div>
+
+    <!-- Limits -->
+    <div id="admin-pane-limits" class="admin-pane">
+      <div id="admin-limits-pane-inner"></div>
+    </div>
+
+    <!-- Banner -->
+    <div id="admin-pane-banner" class="admin-pane">
+      <div id="admin-banner-inner"></div>
+    </div>
+
+    <!-- Users -->
+    <div id="admin-pane-users" class="admin-pane">
+      <div style="padding:0 0 12px;display:flex;gap:8px;align-items:center">
+        <input class="form-input sm" style="flex:1;margin:0" placeholder="Search users…" oninput="renderAdminUsers(this.value.toLowerCase())"/>
+        <button class="btn-secondary sm" onclick="loadAdminUsers()">↻ Refresh</button>
+      </div>
+      <div id="admin-user-list"></div>
+    </div>
   </div>
 </div>
 
@@ -451,6 +484,21 @@
 </div>
 
 <div id="toast" class="toast hidden"></div>
+
+<!-- Site-down screen -->
+<div id="site-down-screen" class="site-down hidden">
+  <div class="site-down-card">
+    <div class="site-down-icon">🔧</div>
+    <h2>Down for Maintenance</h2>
+    <p id="site-down-msg">NovaAI is temporarily offline. Check back soon.</p>
+  </div>
+</div>
+
+<!-- Site banner -->
+<div id="site-banner" class="site-banner hidden">
+  <span id="site-banner-text"></span>
+  <button onclick="document.getElementById('site-banner').classList.add('hidden')" style="background:none;border:none;cursor:pointer;font-size:16px;line-height:1;padding:0 0 0 12px;opacity:.7">✕</button>
+</div>
 
 <script src="app.js"></script>
 </body>
