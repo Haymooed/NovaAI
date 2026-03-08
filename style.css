@@ -463,3 +463,21 @@ html,body{height:100%;overflow:hidden;font-family:'Inter',system-ui,sans-serif;f
   .admin-limit-grid { grid-template-columns: 1fr; }
   .admin-modal-wide { max-width: 100%; }
 }
+
+/* ── Message actions ──────────────────────────────────────── */
+.msg-actions { display: flex; gap: 4px; margin-top: 8px; opacity: 0; transition: opacity .15s; }
+.message.ai:hover .msg-actions { opacity: 1; }
+.msg-action-btn { background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px; font-size: 13px; cursor: pointer; transition: .15s; line-height: 1.4; }
+.msg-action-btn:hover { background: var(--accent-bg); border-color: var(--accent); }
+.msg-action-btn.reacted { background: var(--accent-bg); border-color: var(--accent); }
+
+/* ── Chat item btns ───────────────────────────────────────── */
+.chat-item-btns { display: flex; gap: 2px; opacity: 0; flex-shrink: 0; }
+.chat-item:hover .chat-item-btns { opacity: 1; }
+.chat-item.pinned { border-left: 2px solid var(--accent); }
+
+/* ── Sidebar section labels ───────────────────────────────── */
+.sidebar-section-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text3); padding: 8px 10px 4px; }
+
+/* ── Keyboard shortcut hint ───────────────────────────────── */
+.input-hint { font-size: 11px; color: var(--text3); text-align: center; padding: 5px 0 2px; line-height: 1.6; }
