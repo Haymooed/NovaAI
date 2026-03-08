@@ -7,6 +7,21 @@ let DAILY_MSGS = 0, DAILY_IMGS = 0, IMG_LIMIT = 3;
 let GROUP_REALTIME = null, IS_LOADING = false;
 const COLORS = ['#7c3aed','#3b82f6','#10b981','#f59e0b','#ef4444','#ec4899','#06b6d4','#8b5cf6','#84cc16'];
 
+
+// ── Worker API helpers (bypass Supabase JS RLS issues) ────
+async function api(path, body) {
+  const res = await fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-User-Token': SESSION_TOKEN },
+    body: JSON.stringify(body)
+  });
+  return res.json();
+}
+async function apiGet(path) {
+  const res = await fetch(path, { headers: { 'X-User-Token': SESSION_TOKEN } });
+  return res.json();
+}
+
 // ── Boot ───────────────────────────────────────────────────
 async function boot() {
   try {
@@ -149,9 +164,12 @@ function showSection(s) { setActiveSection(s); }
 
 // ── Chats ──────────────────────────────────────────────────
 async function loadChats() {
-  const { data, error } = await SB.from('ai_chats').select('*').eq('user_id', ME.id).order('updated_at', { ascending: false });
-  if (error) { console.error('loadChats:', error); return; }
-  CHATS = data || [];
+  const data = await apiGet('/api/chats/list');
+  if (!Array.isArray(data)) { console.error('loadChats:', data); return; }
+  CHATS = data;
+  renderChatList(CHATS);
+}
+  CHATS = data;
   renderChatList(CHATS);
 }
 
@@ -199,9 +217,10 @@ async function openChat(id) {
   document.getElementById('chat-title-display').textContent = chat.title || 'Chat';
   document.getElementById('mobile-title').textContent = chat.title || 'Chat';
   setAvatar(document.getElementById('chat-header-avatar'), ME);
-  const { data: msgs } = await SB.from('ai_messages').select('*').eq('chat_id', id).order('created_at');
-  CHAT_MESSAGES[id] = msgs || [];
-  renderMessages(msgs || []);
+  const msgs = await apiGet('/api/chats/messages?chat_id=' + id);
+  const msgList = Array.isArray(msgs) ? msgs : [];
+  CHAT_MESSAGES[id] = msgList;
+  renderMessages(msgList);
   renderChatList(CHATS);
   closeSidebar();
 }
@@ -213,14 +232,58 @@ function renderMessages(msgs) {
   el.scrollTop = el.scrollHeight;
 }
 
-function buildMsgHTML(role, content, time) {
+function buildMsgHTML(role, content, time, msgId) {
   const isUser = role === 'user';
   const t = time ? new Date(time).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }) : '';
   const body = isUser ? `<div class="msg-text">${esc(content)}</div>` : `<div class="msg-text">${mdRender(content)}</div>`;
   const av = isUser
     ? `<div class="msg-av" style="background:${ME.avatar_color||'#7c3aed'}">${(ME.display_name||'U')[0].toUpperCase()}</div>`
     : `<div class="msg-av nova-av">N</div>`;
-  return `<div class="message ${isUser?'user':'ai'}">${av}<div class="msg-body">${body}<div class="msg-time">${t}</div></div></div>`;
+  const actions = isUser ? '' : `
+    <div class="msg-actions">
+      <button class="msg-action-btn" title="Copy" onclick="copyMsg(this)">📋</button>
+      <button class="msg-action-btn" title="Thumbs up" onclick="reactMsg(this,'👍')">👍</button>
+      <button class="msg-action-btn" title="Thumbs down" onclick="reactMsg(this,'👎')">👎</button>
+      <button class="msg-action-btn" title="Regenerate" onclick="regenMsg(this)">🔄</button>
+    </div>`;
+  return `<div class="message ${isUser?'user':'ai'}" data-content="${esc(content)}">${av}<div class="msg-body">${body}${actions}<div class="msg-time">${t}</div></div></div>`;
+}
+
+function copyMsg(btn) {
+  const msg = btn.closest('.message');
+  const text = msg?.dataset.content || '';
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '✅'; setTimeout(() => btn.textContent = '📋', 1500);
+  });
+}
+
+function reactMsg(btn, emoji) {
+  btn.classList.toggle('reacted');
+  btn.style.opacity = btn.classList.contains('reacted') ? '1' : '';
+}
+
+async function regenMsg(btn) {
+  // find the preceding user message
+  const msgEl = btn.closest('.message');
+  let prev = msgEl?.previousElementSibling;
+  while (prev && !prev.classList.contains('user')) prev = prev?.previousElementSibling;
+  const prevText = prev?.dataset.content;
+  if (!prevText || !CURRENT_CHAT_ID) return;
+  msgEl.remove();
+  setLoading(true); showTyping('Regenerating…');
+  const history = (CHAT_MESSAGES[CURRENT_CHAT_ID] || []).slice(-20).map(m => ({ role: m.role, content: m.content }));
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-User-Token': SESSION_TOKEN },
+      body: JSON.stringify({ messages: [{ role: 'system', content: buildSysPrompt() }, ...history, { role: 'user', content: prevText }], temperature: 0.9, max_tokens: 2048 })
+    });
+    const data = await res.json();
+    hideTyping(); setLoading(false);
+    const reply = data.choices?.[0]?.message?.content || '(no response)';
+    appendMsg('assistant', reply);
+    await api('/api/chats/message', { chat_id: CURRENT_CHAT_ID, role: 'assistant', content: reply });
+  } catch(e) { hideTyping(); setLoading(false); showToast('Regeneration failed', 'error'); }
 }
 
 function appendMsg(role, content) {
@@ -346,7 +409,7 @@ async function sendMessage() {
     if (!ok) { showToast('Could not create chat', 'error'); return; }
   }
 
-  await SB.from('ai_messages').insert({ chat_id: CURRENT_CHAT_ID, role: 'user', content: text });
+  await api('/api/chats/message', { chat_id: CURRENT_CHAT_ID, role: 'user', content: text });
 
   setLoading(true);
   showTyping(CURRENT_MODE === 'search' ? 'Searching the web…' : 'Thinking…');
@@ -386,9 +449,11 @@ async function sendMessage() {
 
     if (!CHAT_MESSAGES[CURRENT_CHAT_ID]) CHAT_MESSAGES[CURRENT_CHAT_ID] = [];
     CHAT_MESSAGES[CURRENT_CHAT_ID].push({ role: 'user', content: text }, { role: 'assistant', content: reply });
-    await SB.from('ai_messages').insert({ chat_id: CURRENT_CHAT_ID, role: 'assistant', content: reply });
-    await SB.from('ai_chats').update({ last_message: reply.slice(0,80) }).eq('id', CURRENT_CHAT_ID);
+    await api('/api/chats/message', { chat_id: CURRENT_CHAT_ID, role: 'assistant', content: reply });
+    await api('/api/chats/update', { chat_id: CURRENT_CHAT_ID, last_message: reply.slice(0,80) });
     loadChats();
+    // Auto-title after first exchange
+    if ((CHAT_MESSAGES[CURRENT_CHAT_ID]||[]).length <= 2) autoTitleChat(text, reply);
   } catch(e) {
     clearTimeout(t1);
     hideTyping(); setLoading(false);
@@ -406,17 +471,16 @@ function buildSysPrompt() {
 
 async function createChat(firstMsg) {
   const title = (firstMsg || 'New Chat').slice(0, 50);
-  // Only insert columns guaranteed to exist
-  const { data, error } = await SB.from('ai_chats').insert({ user_id: ME.id, title }).select().single();
-  if (error || !data) {
-    const msg = error?.message || error?.hint || JSON.stringify(error) || 'unknown';
-    console.error('createChat error:', msg, error);
-    showToast('Chat error: ' + msg, 'error');
+  const res = await api('/api/chats/create', { title });
+  if (res.error || !res.data) {
+    showToast('Could not create chat: ' + (res.error || 'unknown'), 'error');
+    console.error('createChat:', res);
     return false;
   }
-  CURRENT_CHAT_ID = data.id;
-  CHAT_MESSAGES[data.id] = [];
-  CHATS.unshift(data);
+  const chatData = res.data;
+  CURRENT_CHAT_ID = chatData.id;
+  CHAT_MESSAGES[chatData.id] = [];
+  CHATS.unshift(chatData);
   document.getElementById('chat-header').classList.remove('hidden');
   document.getElementById('chat-title-display').textContent = title;
   document.getElementById('mobile-title').textContent = title;
@@ -425,7 +489,7 @@ async function createChat(firstMsg) {
 }
 
 async function deleteChat(id) {
-  await SB.from('ai_chats').delete().eq('id', id);
+  await api('/api/chats/delete', { chat_id: id });
   CHATS = CHATS.filter(c => c.id !== id);
   if (CURRENT_CHAT_ID === id) newChat();
   else renderChatList(CHATS);
@@ -447,7 +511,7 @@ async function finishRename() {
   const title = i.value.trim() || 'New Chat';
   d.textContent = title; d.classList.remove('hidden'); i.classList.add('hidden');
   if (CURRENT_CHAT_ID) {
-    await SB.from('ai_chats').update({ title }).eq('id', CURRENT_CHAT_ID);
+    await api('/api/chats/update', { chat_id: CURRENT_CHAT_ID, title });
     const c = CHATS.find(c => c.id === CURRENT_CHAT_ID);
     if (c) c.title = title;
     renderChatList(CHATS);
@@ -461,6 +525,7 @@ function setMode(mode) {
   document.getElementById('mode-' + mode)?.classList.add('active');
   const hints = { normal:'Message NovaAI…', code:'Ask a coding question…', imagine:'Describe an image to generate…', search:'Search the web…', creative:'Write something creative…' };
   document.getElementById('msg-input').placeholder = hints[mode] || 'Message NovaAI…';
+  updateWelcomeChips();
 }
 function enableWebSearch() { setMode('search'); }
 
@@ -528,10 +593,8 @@ async function doFileAnalysis(question) {
     hideTyping(); setLoading(false);
     if (data.error) { showToast(data.error, 'error'); return; }
     appendMsg('assistant', data.reply);
-    await SB.from('ai_messages').insert([
-      { chat_id: CURRENT_CHAT_ID, role: 'user', content: display },
-      { chat_id: CURRENT_CHAT_ID, role: 'assistant', content: data.reply }
-    ]);
+    await api('/api/chats/message', { chat_id: CURRENT_CHAT_ID, role: 'user', content: display });
+    await api('/api/chats/message', { chat_id: CURRENT_CHAT_ID, role: 'assistant', content: data.reply });
   } catch(e) { clearTimeout(t); hideTyping(); setLoading(false); showToast('File analysis failed', 'error'); }
 }
 
@@ -796,9 +859,12 @@ async function deleteAccount() {
 }
 
 async function exportChats() {
-  const { data: chats } = await SB.from('ai_chats').select('*').eq('user_id', ME.id);
+  const chats = await apiGet('/api/chats/list');
   const out = [];
-  for (const c of chats||[]) { const { data: msgs } = await SB.from('ai_messages').select('*').eq('chat_id', c.id); out.push({...c, messages: msgs||[]}); }
+  for (const c of (Array.isArray(chats)?chats:[])) {
+    const msgs = await apiGet('/api/chats/messages?chat_id=' + c.id);
+    out.push({...c, messages: Array.isArray(msgs)?msgs:[]});
+  }
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([JSON.stringify(out,null,2)],{type:'application/json'}));
   a.download = 'novaai-export.json'; a.click(); showToast('Exported!');
@@ -810,8 +876,11 @@ async function importChats(e) {
   const chats = Array.isArray(data) ? data : (data.conversations||[]);
   let n = 0;
   for (const c of chats) {
-    const { data: nc } = await SB.from('ai_chats').insert({ user_id: ME.id, title: c.title||'Imported Chat', last_message:'' }).select().single();
-    if (nc && c.messages?.length) await SB.from('ai_messages').insert(c.messages.map(m=>({ chat_id: nc.id, role: m.role, content: m.content })));
+    const res = await api('/api/chats/create', { title: c.title||'Imported Chat' });
+    const nc = res.data;
+    if (nc && c.messages?.length) {
+      for (const m of c.messages) await api('/api/chats/message', { chat_id: nc.id, role: m.role, content: m.content });
+    }
     n++;
   }
   showToast(`Imported ${n} chats`); loadChats();
@@ -819,7 +888,7 @@ async function importChats(e) {
 
 async function clearAllChats() {
   if (!confirm('Delete all chats permanently?')) return;
-  await SB.from('ai_chats').delete().eq('user_id', ME.id);
+  for (const c of CHATS) { await api('/api/chats/delete', { chat_id: c.id }); }
   CHATS=[]; CHAT_MESSAGES={}; CURRENT_CHAT_ID=null; newChat(); showToast('All chats deleted');
 }
 
@@ -1170,6 +1239,118 @@ function mdRender(text) {
   o = o.replace(/\n\n+/g, '</p><p>');
   o = o.replace(/\n/g, '<br>');
   return '<p>' + o + '</p>';
+}
+
+// ── Pinned chats ──────────────────────────────────────────
+function togglePin(id, e) {
+  e?.stopPropagation();
+  const pinned = JSON.parse(localStorage.getItem('pinned_chats') || '[]');
+  const idx = pinned.indexOf(id);
+  if (idx === -1) pinned.push(id); else pinned.splice(idx, 1);
+  localStorage.setItem('pinned_chats', JSON.stringify(pinned));
+  renderChatList(CHATS);
+  showToast(idx === -1 ? 'Chat pinned' : 'Chat unpinned');
+}
+
+function isPinned(id) {
+  return JSON.parse(localStorage.getItem('pinned_chats') || '[]').includes(id);
+}
+
+// Override renderChatList to support pinned + folder
+const _origRenderChatList = renderChatList;
+function renderChatList(list) {
+  const el = document.getElementById('chat-list');
+  if (!list.length) { el.innerHTML = '<p class="sidebar-empty">No chats yet. Start one!</p>'; return; }
+  const pinned = list.filter(c => isPinned(c.id));
+  const unpinned = list.filter(c => !isPinned(c.id));
+  const makeItem = c => `
+    <div class="chat-item ${c.id === CURRENT_CHAT_ID ? 'active' : ''} ${isPinned(c.id)?'pinned':''}" onclick="openChat('${c.id}')">
+      <div class="chat-item-text">
+        <div class="chat-item-title">${isPinned(c.id)?'📌 ':''}${esc(c.title || 'New Chat')}</div>
+        <div class="chat-item-preview">${esc((c.last_message || '').slice(0,55))}</div>
+      </div>
+      <div class="chat-item-btns">
+        <button class="chat-item-del" onclick="event.stopPropagation();togglePin('${c.id}')" title="${isPinned(c.id)?'Unpin':'Pin'}">📌</button>
+        <button class="chat-item-del" onclick="event.stopPropagation();deleteChat('${c.id}')" title="Delete">✕</button>
+      </div>
+    </div>`;
+  el.innerHTML = (pinned.length ? `<div class="sidebar-section-label">Pinned</div>${pinned.map(makeItem).join('')}<div class="sidebar-section-label">Chats</div>` : '') + unpinned.map(makeItem).join('');
+}
+
+// ── Prompt suggestions ─────────────────────────────────────
+const PROMPT_SUGGESTIONS = {
+  normal: ['Explain something complex simply', 'Write a professional email', 'Give me a fun fact', 'Help me brainstorm ideas'],
+  code: ['Debug this code', 'Write a REST API in Python', 'Explain Big O notation', 'Generate a regex for emails'],
+  imagine: ['A futuristic city at sunset', 'A cute robot reading a book', 'Underwater forest with bioluminescent plants', 'Cozy cabin in snowy mountains'],
+  search: ['Latest AI news today', 'Current Bitcoin price', 'Best restaurants in Sydney', 'Recent space discoveries'],
+  creative: ['Write a short sci-fi story', 'Poem about rain at night', 'A villain monologue', 'Opening line of a mystery novel']
+};
+
+function updateWelcomeChips() {
+  const chips = document.querySelector('.welcome-chips');
+  if (!chips) return;
+  const suggestions = PROMPT_SUGGESTIONS[CURRENT_MODE] || PROMPT_SUGGESTIONS.normal;
+  chips.innerHTML = suggestions.map(s => `<button class="chip" onclick="setInput('${esc(s)}')">${s}</button>`).join('');
+}
+
+// ── Character counter ──────────────────────────────────────
+function updateCharCount(el) {
+  resizeInput(el);
+  const counter = document.getElementById('char-count');
+  if (counter) {
+    const len = el.value.length;
+    counter.textContent = len > 0 ? `${len} chars` : '';
+    counter.style.color = len > 3000 ? 'var(--danger-text)' : 'var(--text3)';
+  }
+}
+
+// ── Keyboard shortcuts ─────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey || e.metaKey) {
+    if (e.key === 'k') { e.preventDefault(); document.getElementById('msg-input')?.focus(); }
+    if (e.key === 'n') { e.preventDefault(); newChat(); }
+    if (e.key === '/') { e.preventDefault(); document.querySelector('.sidebar-search input')?.focus(); }
+  }
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.overlay:not(.hidden)').forEach(el => el.classList.add('hidden'));
+    closeSidebar();
+  }
+});
+
+// ── Word count in messages ─────────────────────────────────
+function getWordCount(text) {
+  return text.trim().split(/\s+/).filter(Boolean).length;
+}
+
+// ── Auto-title chats from AI ───────────────────────────────
+async function autoTitleChat(userMsg, aiReply) {
+  if (!CURRENT_CHAT_ID) return;
+  const chat = CHATS.find(c => c.id === CURRENT_CHAT_ID);
+  if (!chat || chat.title !== userMsg.slice(0,50)) return; // already renamed
+  // Generate a short title via Groq
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-User-Token': SESSION_TOKEN },
+      body: JSON.stringify({
+        messages: [
+          { role: 'system', content: 'Generate a short 3-5 word title for this conversation. Reply with ONLY the title, no punctuation, no quotes.' },
+          { role: 'user', content: userMsg.slice(0, 200) },
+          { role: 'assistant', content: aiReply.slice(0, 200) }
+        ],
+        max_tokens: 20, temperature: 0.3
+      })
+    });
+    const data = await res.json();
+    const title = data.choices?.[0]?.message?.content?.trim().slice(0,50);
+    if (title && title.length > 2) {
+      await api('/api/chats/update', { chat_id: CURRENT_CHAT_ID, title });
+      chat.title = title;
+      document.getElementById('chat-title-display').textContent = title;
+      document.getElementById('mobile-title').textContent = title;
+      renderChatList(CHATS);
+    }
+  } catch(_) {}
 }
 
 // ── Images Panel ──────────────────────────────────────────
