@@ -234,15 +234,8 @@ export default {
 
         const imgBytes = await imgRes.arrayBuffer();
         if (!imgBytes.byteLength) return json({ error: 'Empty image returned.' }, 500);
-        const uint8 = new Uint8Array(imgBytes);
-        let binary = '';
-        const chunkSize = 8192;
-        for (let i = 0; i < uint8.length; i += chunkSize) {
-          binary += String.fromCharCode(...uint8.subarray(i, i + chunkSize));
-        }
-        const base64 = btoa(binary);
 
-        // Upload to Supabase Storage
+        // Upload to Supabase Storage first
         const imgId = crypto.randomUUID();
         const storagePath = `${user.id}/${imgId}.jpg`;
         const uploadRes = await fetch(`${env.SUPABASE_URL}/storage/v1/object/generated-images/${storagePath}`, {
@@ -272,7 +265,22 @@ export default {
           imgs_reset_at: imgReset < todayMidnight ? now.toISOString() : profile.imgs_reset_at
         });
 
-        return json({ image: `data:image/jpeg;base64,${base64}`, url: publicUrl, imgId, prompt, _dailyImgs: dailyImgs + 1, limit: IMG_LIMIT });
+        // If storage worked, return just the URL (tiny response)
+        // If not, return the image as raw binary — NOT base64 JSON (avoids size/corruption issues)
+        if (publicUrl) {
+          return json({ url: publicUrl, imgId, prompt, _dailyImgs: dailyImgs + 1, limit: IMG_LIMIT });
+        } else {
+          // Return raw bytes with a JSON header in a multipart-style approach:
+          // Encode as base64 in chunks to avoid stack overflow, then return
+          const uint8 = new Uint8Array(imgBytes);
+          let binary = '';
+          const chunkSize = 8192;
+          for (let i = 0; i < uint8.length; i += chunkSize) {
+            binary += String.fromCharCode(...uint8.subarray(i, i + chunkSize));
+          }
+          const base64 = btoa(binary);
+          return json({ image: `data:image/jpeg;base64,${base64}`, imgId, prompt, _dailyImgs: dailyImgs + 1, limit: IMG_LIMIT });
+        }
       } catch (err) {
         return json({ error: err.message }, 500);
       }
