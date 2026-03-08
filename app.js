@@ -169,25 +169,8 @@ async function loadChats() {
   CHATS = data;
   renderChatList(CHATS);
 }
-  CHATS = data;
-  renderChatList(CHATS);
-}
 
-function renderChatList(list) {
-  const el = document.getElementById('chat-list');
-  if (!list.length) {
-    el.innerHTML = '<p class="sidebar-empty">No chats yet. Start one!</p>';
-    return;
-  }
-  el.innerHTML = list.map(c => `
-    <div class="chat-item ${c.id === CURRENT_CHAT_ID ? 'active' : ''}" onclick="openChat('${c.id}')">
-      <div class="chat-item-text">
-        <div class="chat-item-title">${esc(c.title || 'New Chat')}</div>
-        <div class="chat-item-preview">${esc((c.last_message || '').slice(0,55))}</div>
-      </div>
-      <button class="chat-item-del" onclick="event.stopPropagation();deleteChat('${c.id}')" title="Delete">✕</button>
-    </div>`).join('');
-}
+
 
 function filterChats(q) {
   const filtered = CHATS.filter(c =>
@@ -1257,7 +1240,6 @@ function isPinned(id) {
 }
 
 // Override renderChatList to support pinned + folder
-const _origRenderChatList = renderChatList;
 function renderChatList(list) {
   const el = document.getElementById('chat-list');
   if (!list.length) { el.innerHTML = '<p class="sidebar-empty">No chats yet. Start one!</p>'; return; }
