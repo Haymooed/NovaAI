@@ -43,6 +43,7 @@ async function initApp(session) {
   loadGroups();
   loadUpdateLog();
   setActiveSection('chats');
+  checkSiteStatus();
 }
 
 function showAuth() {
@@ -823,27 +824,282 @@ async function clearAllChats() {
 }
 
 // ── Admin ──────────────────────────────────────────────────
+let ADMIN_CFG = {};
+let ADMIN_USERS = [];
+
 async function openAdmin() {
   document.getElementById('admin-modal').classList.remove('hidden');
+  switchAdminTab('site');
+  await Promise.all([loadAdminConfig(), loadAdminUsers()]);
+}
+
+function switchAdminTab(tab) {
+  document.querySelectorAll('.admin-tab').forEach(el => el.classList.toggle('active', el.dataset.tab === tab));
+  document.querySelectorAll('.admin-pane').forEach(el => el.classList.remove('active'));
+  document.getElementById('admin-pane-' + tab)?.classList.add('active');
+}
+
+async function loadAdminConfig() {
+  const res = await fetch('/api/admin/config', { headers: {'X-User-Token': SESSION_TOKEN} });
+  ADMIN_CFG = await res.json();
+  renderAdminSitePane();
+  renderAdminLimitsPane();
+  renderAdminBannerPane();
+}
+
+function renderAdminSitePane() {
+  const c = ADMIN_CFG;
+  const siteDown = c.site_down === 'true';
+  const chatOff = c.chat_disabled === 'true';
+  const imgOff = c.img_disabled === 'true';
+
+  document.getElementById('admin-site-status').innerHTML = `
+    <div class="admin-status-card ${siteDown ? 'danger' : 'ok'}">
+      <div class="admin-status-dot"></div>
+      <span>${siteDown ? '🔴 Site is OFFLINE' : '🟢 Site is ONLINE'}</span>
+    </div>`;
+
+  document.getElementById('admin-site-controls').innerHTML = `
+    <div class="admin-toggle-row">
+      <div>
+        <div class="admin-toggle-label">🔴 Site Offline Mode</div>
+        <div class="admin-toggle-sub">Blocks all users (except admins). Shows a maintenance page.</div>
+      </div>
+      <button class="admin-toggle-btn ${siteDown?'on':'off'}" onclick="adminToggle('site_down','${siteDown?'false':'true'}','Site ${siteDown?'restored':'taken offline'}')">
+        ${siteDown ? 'Bring Online' : 'Take Offline'}
+      </button>
+    </div>
+    <div class="admin-sub-row ${siteDown?'':'muted'}">
+      <input class="form-input sm" id="down-msg-input" value="${esc(c.down_message||'NovaAI is temporarily offline for maintenance.')}" placeholder="Offline message shown to users"/>
+      <button class="btn-secondary sm" onclick="adminSaveDownMsg()">Save Message</button>
+    </div>
+    <div class="admin-toggle-row">
+      <div>
+        <div class="admin-toggle-label">💬 Disable Chat</div>
+        <div class="admin-toggle-sub">Blocks all new messages. Images still work.</div>
+      </div>
+      <button class="admin-toggle-btn ${chatOff?'on':'off'}" onclick="adminToggle('chat_disabled','${chatOff?'false':'true'}','Chat ${chatOff?'enabled':'disabled'}')">
+        ${chatOff ? 'Enable Chat' : 'Disable Chat'}
+      </button>
+    </div>
+    <div class="admin-toggle-row">
+      <div>
+        <div class="admin-toggle-label">🎨 Disable Image Gen</div>
+        <div class="admin-toggle-sub">Blocks all image generation. Chat still works.</div>
+      </div>
+      <button class="admin-toggle-btn ${imgOff?'on':'off'}" onclick="adminToggle('img_disabled','${imgOff?'false':'true'}','Image gen ${imgOff?'enabled':'disabled'}')">
+        ${imgOff ? 'Enable Images' : 'Disable Images'}
+      </button>
+    </div>`;
+}
+
+function renderAdminLimitsPane() {
+  const c = ADMIN_CFG;
+  document.getElementById('admin-limits-pane-inner').innerHTML = `
+    <div class="admin-section-label">🌐 Global Limits (applies to all free users unless overridden)</div>
+    <div class="admin-limit-grid">
+      <div class="admin-limit-item">
+        <label>Free msg limit/day</label>
+        <div style="display:flex;gap:6px">
+          <input class="form-input sm" id="g-msg-free" type="number" min="0" max="9999" value="${c.global_msg_limit||50}"/>
+          <button class="btn-secondary sm" onclick="adminSaveGlobalLimit('global_msg_limit','g-msg-free','Message limit saved')">Save</button>
+        </div>
+      </div>
+      <div class="admin-limit-item">
+        <label>Free image limit/day</label>
+        <div style="display:flex;gap:6px">
+          <input class="form-input sm" id="g-img-free" type="number" min="0" max="9999" value="${c.global_img_limit_free||3}"/>
+          <button class="btn-secondary sm" onclick="adminSaveGlobalLimit('global_img_limit_free','g-img-free','Image limit saved')">Save</button>
+        </div>
+      </div>
+      <div class="admin-limit-item">
+        <label>Pro image limit/day</label>
+        <div style="display:flex;gap:6px">
+          <input class="form-input sm" id="g-img-pro" type="number" min="0" max="9999" value="${c.global_img_limit_pro||10}"/>
+          <button class="btn-secondary sm" onclick="adminSaveGlobalLimit('global_img_limit_pro','g-img-pro','Pro limit saved')">Save</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderAdminBannerPane() {
+  const c = ADMIN_CFG;
+  const hasBanner = !!c.banner;
+  document.getElementById('admin-banner-inner').innerHTML = `
+    <div class="admin-section-label">📢 Site-wide Banner Message</div>
+    <div class="admin-sub-text">Shown to all users at the top of the app.</div>
+    <textarea class="form-input" id="banner-text" rows="3" placeholder="e.g. Maintenance scheduled for Sunday 2am AEST">${esc(c.banner||'')}</textarea>
+    <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+      <select class="form-input sm" id="banner-type" style="flex:0 0 120px">
+        <option value="info" ${c.banner_type==='info'?'selected':''}>ℹ️ Info</option>
+        <option value="warning" ${c.banner_type==='warning'?'selected':''}>⚠️ Warning</option>
+        <option value="danger" ${c.banner_type==='danger'?'selected':''}>🔴 Danger</option>
+        <option value="success" ${c.banner_type==='success'?'selected':''}>✅ Success</option>
+      </select>
+      <button class="btn-primary sm" onclick="adminSaveBanner()">Set Banner</button>
+      ${hasBanner ? '<button class="btn-danger sm" onclick="adminClearBanner()">Clear Banner</button>' : ''}
+    </div>`;
+}
+
+async function loadAdminUsers() {
   const res = await fetch('/api/admin/users', { headers: {'X-User-Token': SESSION_TOKEN} });
-  const users = await res.json();
+  ADMIN_USERS = await res.json();
+  renderAdminUsers();
+}
+
+function renderAdminUsers(filter = '') {
   const el = document.getElementById('admin-user-list');
-  if (!users?.length) { el.innerHTML = '<div class="empty-state">No users.</div>'; return; }
-  el.innerHTML = users.map(u => `
-    <div class="admin-user-row">
+  let list = ADMIN_USERS;
+  if (filter) list = list.filter(u => (u.display_name||'').toLowerCase().includes(filter) || (u.username||'').toLowerCase().includes(filter));
+  if (!list.length) { el.innerHTML = '<div class="empty-state">No users found.</div>'; return; }
+  el.innerHTML = list.map(u => `
+    <div class="admin-user-row ${u.is_banned?'banned':''}">
       <div class="msg-av" style="background:${u.avatar_color||'#7c3aed'}">${(u.display_name||'?')[0].toUpperCase()}</div>
       <div class="admin-user-info">
-        <div class="admin-user-name">${esc(u.display_name||u.username||'User')}</div>
-        <div class="admin-user-sub">${u.daily_msgs||0} msgs · ${u.daily_imgs||0} imgs${u.is_admin?' · Admin':''}</div>
+        <div class="admin-user-name">${esc(u.display_name||u.username||'User')} ${u.is_admin?'<span class="badge-admin">Admin</span>':''} ${u.is_banned?'<span class="badge-banned">Banned</span>':''}</div>
+        <div class="admin-user-sub">
+          💬 ${u.daily_msgs||0}${u.custom_msg_limit!=null?'/'+u.custom_msg_limit:''} msgs today &nbsp;·&nbsp;
+          🎨 ${u.daily_imgs||0}${u.custom_img_limit!=null?'/'+u.custom_img_limit:''} imgs today
+        </div>
       </div>
-      <span class="tier-badge ${u.tier||'free'}">${u.tier||'free'}</span>
-      ${u.id!==ME.id?`<button class="admin-tier-btn ${u.tier==='pro'?'set-free':'set-pro'}" onclick="setTier('${u.id}','${u.tier==='pro'?'free':'pro'}')">${u.tier==='pro'?'→ Free':'→ Pro'}</button>`:''}
+      <div class="admin-user-actions">
+        <span class="tier-badge ${u.tier||'free'}">${u.tier||'free'}</span>
+        <button class="admin-icon-btn" title="Expand controls" onclick="toggleUserControls('${u.id}')">⚙️</button>
+      </div>
+    </div>
+    <div id="uc-${u.id}" class="user-controls hidden">
+      <div class="user-controls-grid">
+        <button class="uc-btn tier" onclick="setTier('${u.id}','${u.tier==='pro'?'free':'pro'}')">${u.tier==='pro'?'→ Free':'→ Pro'}</button>
+        <button class="uc-btn reset" onclick="adminResetUser('${u.id}')">🔄 Reset Counts</button>
+        <button class="uc-btn ${u.is_banned?'unban':'ban'}" onclick="adminBanUser('${u.id}',${!u.is_banned})">${u.is_banned?'✅ Unban':'🚫 Ban'}</button>
+      </div>
+      <div class="user-limits-row">
+        <div class="user-limit-field">
+          <label>Custom msg limit/day <small>(blank = global)</small></label>
+          <div style="display:flex;gap:6px">
+            <input class="form-input sm" id="ul-msg-${u.id}" type="number" min="0" max="9999" placeholder="${ADMIN_CFG.global_msg_limit||50}" value="${u.custom_msg_limit??''}"/>
+            <input class="form-input sm" id="ul-img-${u.id}" type="number" min="0" max="9999" placeholder="${u.tier==='pro'?(ADMIN_CFG.global_img_limit_pro||10):(ADMIN_CFG.global_img_limit_free||3)}" style="width:70px" title="Custom img limit"/>
+            <button class="btn-secondary sm" onclick="adminSetUserLimits('${u.id}')">Save</button>
+          </div>
+        </div>
+      </div>
     </div>`).join('');
+}
+
+function toggleUserControls(uid) {
+  const el = document.getElementById('uc-' + uid);
+  if (el) el.classList.toggle('hidden');
+}
+
+async function adminToggle(key, value, msg) {
+  await adminSetConfig(key, value);
+  showToast(msg);
+  await loadAdminConfig();
+}
+
+async function adminSaveDownMsg() {
+  const msg = document.getElementById('down-msg-input')?.value?.trim();
+  if (!msg) return;
+  await adminSetConfig('down_message', msg);
+  showToast('Offline message saved');
+}
+
+async function adminSaveGlobalLimit(key, inputId, msg) {
+  const val = document.getElementById(inputId)?.value;
+  if (val === '' || val == null) return;
+  await adminSetConfig(key, val);
+  showToast(msg);
+  ADMIN_CFG[key] = val;
+}
+
+async function adminSaveBanner() {
+  const text = document.getElementById('banner-text')?.value?.trim();
+  const type = document.getElementById('banner-type')?.value || 'info';
+  await fetch('/api/admin/set-config', {
+    method: 'POST', headers: {'Content-Type':'application/json','X-User-Token':SESSION_TOKEN},
+    body: JSON.stringify({ updates: [{key:'banner',value:text||''},{key:'banner_type',value:type}] })
+  });
+  showToast('Banner updated');
+  checkBanner();
+  await loadAdminConfig();
+}
+
+async function adminClearBanner() {
+  await adminSetConfig('banner', '');
+  document.getElementById('site-banner')?.classList.add('hidden');
+  showToast('Banner cleared');
+  await loadAdminConfig();
+}
+
+async function adminSetConfig(key, value) {
+  await fetch('/api/admin/set-config', {
+    method: 'POST', headers: {'Content-Type':'application/json','X-User-Token':SESSION_TOKEN},
+    body: JSON.stringify({ key, value })
+  });
 }
 
 async function setTier(userId, tier) {
   await fetch('/api/admin/set-tier', { method:'POST', headers:{'Content-Type':'application/json','X-User-Token':SESSION_TOKEN}, body: JSON.stringify({ targetUserId: userId, tier }) });
-  showToast('Updated to ' + tier); openAdmin();
+  showToast('Tier updated to ' + tier);
+  await loadAdminUsers();
+}
+
+async function adminResetUser(uid) {
+  await fetch('/api/admin/reset-user', { method:'POST', headers:{'Content-Type':'application/json','X-User-Token':SESSION_TOKEN}, body: JSON.stringify({ targetUserId: uid }) });
+  showToast('Daily counts reset');
+  await loadAdminUsers();
+}
+
+async function adminBanUser(uid, banned) {
+  await fetch('/api/admin/ban-user', { method:'POST', headers:{'Content-Type':'application/json','X-User-Token':SESSION_TOKEN}, body: JSON.stringify({ targetUserId: uid, banned }) });
+  showToast(banned ? 'User banned' : 'User unbanned');
+  await loadAdminUsers();
+}
+
+async function adminSetUserLimits(uid) {
+  const msgVal = document.getElementById('ul-msg-'+uid)?.value;
+  const imgVal = document.getElementById('ul-img-'+uid)?.value;
+  const body = { targetUserId: uid };
+  body.custom_msg_limit = msgVal === '' ? null : parseInt(msgVal);
+  body.custom_img_limit = imgVal === '' ? null : parseInt(imgVal);
+  await fetch('/api/admin/set-user-limits', { method:'POST', headers:{'Content-Type':'application/json','X-User-Token':SESSION_TOKEN}, body: JSON.stringify(body) });
+  showToast('User limits saved');
+  await loadAdminUsers();
+}
+
+// ── Site banner + site-down check ──────────────────────────
+async function checkSiteStatus() {
+  try {
+    const res = await fetch('/api/site-status');
+    const data = await res.json();
+    if (data.site_down && !ME?.is_admin) {
+      document.getElementById('app').classList.add('hidden');
+      document.getElementById('site-down-screen').classList.remove('hidden');
+      document.getElementById('site-down-msg').textContent = data.down_message;
+      return;
+    }
+    checkBannerData(data);
+  } catch(_) {}
+}
+
+function checkBannerData(data) {
+  const banner = document.getElementById('site-banner');
+  if (!banner) return;
+  if (data.banner) {
+    document.getElementById('site-banner-text').textContent = data.banner;
+    banner.className = 'site-banner banner-' + (data.banner_type || 'info');
+    banner.classList.remove('hidden');
+  } else {
+    banner.classList.add('hidden');
+  }
+}
+
+async function checkBanner() {
+  try {
+    const res = await fetch('/api/site-status');
+    const data = await res.json();
+    checkBannerData(data);
+  } catch(_) {}
 }
 
 // ── Utils ──────────────────────────────────────────────────
