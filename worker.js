@@ -404,6 +404,152 @@ export default {
       } catch(err) { return json({ error: err.message }, 500); }
     }
 
+    // ── POST /api/chats/create ──────────────────────────────
+    // Uses service key — bypasses any RLS issues with JS client
+    if (url.pathname === '/api/chats/create' && request.method === 'POST') {
+      try {
+        const token = request.headers.get('X-User-Token');
+        const user = await getUser(token);
+        if (!user) return json({ error: 'Unauthorized' }, 401);
+        const { title } = await request.json();
+        const r = await fetch(`${env.SUPABASE_URL}/rest/v1/ai_chats`, {
+          method: 'POST',
+          headers: {
+            'apikey': env.SUPABASE_SERVICE_KEY,
+            'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation'
+          },
+          body: JSON.stringify({ user_id: user.id, title: (title||'New Chat').slice(0,50), last_message: '', created_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+        });
+        const rows = await r.json();
+        if (!r.ok) return json({ error: rows?.message || rows?.hint || JSON.stringify(rows) }, r.status);
+        return json({ data: rows[0] });
+      } catch(err) { return json({ error: err.message }, 500); }
+    }
+
+    // ── POST /api/chats/message ──────────────────────────────
+    // Save a message via service key
+    if (url.pathname === '/api/chats/message' && request.method === 'POST') {
+      try {
+        const token = request.headers.get('X-User-Token');
+        const user = await getUser(token);
+        if (!user) return json({ error: 'Unauthorized' }, 401);
+        const { chat_id, role, content } = await request.json();
+        // Verify chat belongs to user
+        const checkR = await fetch(`${env.SUPABASE_URL}/rest/v1/ai_chats?id=eq.${chat_id}&user_id=eq.${user.id}&select=id`, {
+          headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY}` }
+        });
+        const check = await checkR.json();
+        if (!check?.length) return json({ error: 'Chat not found' }, 404);
+        const r = await fetch(`${env.SUPABASE_URL}/rest/v1/ai_messages`, {
+          method: 'POST',
+          headers: {
+            'apikey': env.SUPABASE_SERVICE_KEY,
+            'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal'
+          },
+          body: JSON.stringify({ chat_id, role, content })
+        });
+        if (!r.ok) { const e = await r.text(); return json({ error: e }, r.status); }
+        return json({ ok: true });
+      } catch(err) { return json({ error: err.message }, 500); }
+    }
+
+    // ── PATCH /api/chats/update ──────────────────────────────
+    if (url.pathname === '/api/chats/update' && request.method === 'POST') {
+      try {
+        const token = request.headers.get('X-User-Token');
+        const user = await getUser(token);
+        if (!user) return json({ error: 'Unauthorized' }, 401);
+        const { chat_id, title, last_message } = await request.json();
+        const update = { updated_at: new Date().toISOString() };
+        if (title !== undefined) update.title = title;
+        if (last_message !== undefined) update.last_message = last_message;
+        await fetch(`${env.SUPABASE_URL}/rest/v1/ai_chats?id=eq.${chat_id}&user_id=eq.${user.id}`, {
+          method: 'PATCH',
+          headers: {
+            'apikey': env.SUPABASE_SERVICE_KEY,
+            'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+            'Content-Type': 'application/json', 'Prefer': 'return=minimal'
+          },
+          body: JSON.stringify(update)
+        });
+        return json({ ok: true });
+      } catch(err) { return json({ error: err.message }, 500); }
+    }
+
+    // ── DELETE /api/chats/delete ─────────────────────────────
+    if (url.pathname === '/api/chats/delete' && request.method === 'POST') {
+      try {
+        const token = request.headers.get('X-User-Token');
+        const user = await getUser(token);
+        if (!user) return json({ error: 'Unauthorized' }, 401);
+        const { chat_id } = await request.json();
+        await fetch(`${env.SUPABASE_URL}/rest/v1/ai_chats?id=eq.${chat_id}&user_id=eq.${user.id}`, {
+          method: 'DELETE',
+          headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY}` }
+        });
+        return json({ ok: true });
+      } catch(err) { return json({ error: err.message }, 500); }
+    }
+
+    // ── GET /api/chats/list ──────────────────────────────────
+    if (url.pathname === '/api/chats/list' && request.method === 'GET') {
+      try {
+        const token = request.headers.get('X-User-Token');
+        const user = await getUser(token);
+        if (!user) return json({ error: 'Unauthorized' }, 401);
+        const r = await fetch(`${env.SUPABASE_URL}/rest/v1/ai_chats?user_id=eq.${user.id}&order=updated_at.desc&select=*`, {
+          headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY}` }
+        });
+        const data = await r.json();
+        return json(data);
+      } catch(err) { return json({ error: err.message }, 500); }
+    }
+
+    // ── GET /api/chats/messages ──────────────────────────────
+    if (url.pathname === '/api/chats/messages' && request.method === 'GET') {
+      try {
+        const token = request.headers.get('X-User-Token');
+        const user = await getUser(token);
+        if (!user) return json({ error: 'Unauthorized' }, 401);
+        const chatId = url.searchParams.get('chat_id');
+        // verify ownership
+        const cr = await fetch(`${env.SUPABASE_URL}/rest/v1/ai_chats?id=eq.${chatId}&user_id=eq.${user.id}&select=id`, {
+          headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY}` }
+        });
+        const ck = await cr.json();
+        if (!ck?.length) return json({ error: 'Not found' }, 404);
+        const r = await fetch(`${env.SUPABASE_URL}/rest/v1/ai_messages?chat_id=eq.${chatId}&order=created_at.asc&select=*`, {
+          headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY}` }
+        });
+        const data = await r.json();
+        return json(data);
+      } catch(err) { return json({ error: err.message }, 500); }
+    }
+
+    // ── POST /api/chat/react ─────────────────────────────────
+    // Save a message reaction
+    if (url.pathname === '/api/chat/react' && request.method === 'POST') {
+      try {
+        const token = request.headers.get('X-User-Token');
+        const user = await getUser(token);
+        if (!user) return json({ error: 'Unauthorized' }, 401);
+        const { message_id, emoji } = await request.json();
+        await fetch(`${env.SUPABASE_URL}/rest/v1/message_reactions`, {
+          method: 'POST',
+          headers: {
+            'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+            'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates'
+          },
+          body: JSON.stringify({ message_id, user_id: user.id, emoji })
+        });
+        return json({ ok: true });
+      } catch(err) { return json({ error: err.message }, 500); }
+    }
+
     // ── Static assets ────────────────────────────────────────
     try {
       return await env.ASSETS.fetch(request);
