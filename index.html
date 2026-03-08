@@ -67,6 +67,10 @@
         Updates
         <span id="updates-badge" class="updates-dot hidden"></span>
       </button>
+      <button class="nav-btn" id="nav-images" onclick="setActiveSection('images')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        My Images
+      </button>
     </div>
 
     <div id="chat-list" class="chat-list"></div>
@@ -207,6 +211,17 @@
             </button>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Images panel -->
+    <div id="panel-images" class="panel">
+      <div class="panel-header">
+        <h2>🎨 My Images</h2>
+        <span id="img-panel-counter" class="img-counter"></span>
+      </div>
+      <div id="images-grid" class="images-grid">
+        <div class="empty-state">No images generated yet.<br>Use <strong>Imagine</strong> mode to create some!</div>
       </div>
     </div>
 
@@ -415,6 +430,22 @@
           </div>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit image modal -->
+<div id="edit-image-modal" class="overlay hidden" onclick="if(event.target===this)closeModal('edit-image-modal')">
+  <div class="modal">
+    <div class="modal-head"><h3>✏️ Edit / Regenerate</h3><button class="modal-x" onclick="closeModal('edit-image-modal')">✕</button></div>
+    <div id="edit-img-preview" style="margin-bottom:16px;text-align:center">
+      <img id="edit-img-src" style="max-width:100%;border-radius:10px;max-height:260px" alt=""/>
+    </div>
+    <label class="form-label">Prompt</label>
+    <textarea id="edit-img-prompt" class="form-input" rows="3" placeholder="Describe what you want…"></textarea>
+    <div class="modal-foot">
+      <button class="btn-secondary" onclick="closeModal('edit-image-modal')">Cancel</button>
+      <button class="btn-primary" onclick="regenerateImage()">🎨 Regenerate</button>
     </div>
   </div>
 </div>
