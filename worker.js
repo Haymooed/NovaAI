@@ -58,6 +58,58 @@ export default {
       });
     }
 
+    // ── Content Moderation ───────────────────────────────────
+    // Keyword-based fast block (instant, no API call needed)
+    const BANNED_KEYWORDS = [
+      // Sexual / explicit
+      'porn','pornography','xxx','nsfw','nude','nudity','naked','sex scene','sexual','explicit',
+      'hentai','erotic','genitals','penis','vagina','breasts','nipple','masturbat','orgasm',
+      'fetish','bondage','bdsm','rape','molest','onlyfans','escort','prostitut',
+      // Violence / gore
+      'gore','beheading','torture','mutilat','dismember','snuff','execution video',
+      // CSAM — hard block
+      'child porn','cp porn','loli','shota','underage sex','minor sex','preteen',
+      // Hate / extremism
+      'kill all','genocide','ethnic cleansing','white supremac','neo-nazi','kkk ritual',
+      // Drugs / weapons
+      'make meth','synthesise drugs','build a bomb','make explosives','buy cocaine',
+    ];
+
+    const BANNED_PATTERNS = [
+      /(porn|xxx|nsfw)/i,
+      /(nude|naked)\s+(girl|boy|teen|kid|child|woman|man)/i,
+      /(child|minor|underage|kid|teen)\s+(sex|porn|nude|naked|explicit)/i,
+      /generat.{0,20}(sex|porn|nude|explicit)/i,
+      /(rape|molest|abuse)/i,
+      /make\s+(a\s+)?(website|page|site).{0,40}(porn|sex|nude|adult|explicit)/i,
+    ];
+
+    function moderateContent(text) {
+      if (!text) return null;
+      const lower = text.toLowerCase();
+      for (const kw of BANNED_KEYWORDS) {
+        if (lower.includes(kw)) return `Content blocked: "${kw}" is not allowed.`;
+      }
+      for (const pat of BANNED_PATTERNS) {
+        if (pat.test(text)) return 'Content blocked: inappropriate request detected.';
+      }
+      return null; // clean
+    }
+
+    // Log a moderation violation
+    async function logViolation(userId, type, content) {
+      try {
+        await fetch(`${env.SUPABASE_URL}/rest/v1/mod_logs`, {
+          method: 'POST',
+          headers: {
+            'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+            'Content-Type': 'application/json', 'Prefer': 'return=minimal'
+          },
+          body: JSON.stringify({ user_id: userId, type, content: content?.slice(0,500), created_at: new Date().toISOString() })
+        });
+      } catch(_) {}
+    }
+
     // ── GET /api/config ──────────────────────────────────────
     if (url.pathname === '/api/config' && request.method === 'GET') {
       return json({ supabaseUrl: env.SUPABASE_URL, supabaseAnon: env.SUPABASE_ANON_KEY });
@@ -119,6 +171,25 @@ export default {
         }
 
         const body = await request.json();
+
+        // ── Moderate all user content ─────────────────────
+        const allUserContent = (body.messages||[]).filter(m => m.role==='user').map(m => m.content).join(' ');
+        const lastUserMsg = (body.messages||[]).filter(m => m.role==='user').pop()?.content || '';
+        const chatViolation = moderateContent(allUserContent);
+        if (chatViolation) {
+          await logViolation(user.id, 'chat', lastUserMsg);
+          return json({ error: chatViolation, moderated: true }, 400);
+        }
+        // Extra strict for website builder / code generation
+        const sysMsg = (body.messages||[]).find(m => m.role==='system')?.content || '';
+        if (sysMsg.includes('web developer') || sysMsg.includes('Generate complete') || sysMsg.includes('code')) {
+          const strictViolation = BANNED_KEYWORDS.some(kw => allUserContent.toLowerCase().includes(kw));
+          if (strictViolation) {
+            await logViolation(user.id, 'builder', lastUserMsg);
+            return json({ error: 'Cannot generate content with inappropriate themes.', moderated: true }, 400);
+          }
+        }
+
         const model = profile.tier === 'pro' ? 'llama-3.3-70b-versatile' : 'llama-3.1-8b-instant';
 
         // Web search
@@ -196,6 +267,13 @@ export default {
 
         const { prompt } = await request.json();
         if (!prompt) return json({ error: 'Prompt required' }, 400);
+
+        // ── Moderate image prompt ──────────────────────────
+        const imgViolation = moderateContent(prompt);
+        if (imgViolation) {
+          await logViolation(user.id, 'image', prompt);
+          return json({ error: imgViolation, moderated: true }, 400);
+        }
 
         const cfHeaders = {
           'Authorization': `Bearer ${env.CF_AI_TOKEN}`,
@@ -326,6 +404,21 @@ export default {
         });
         return new Response(await r.text(), { status: r.status, headers: { 'Content-Type': 'application/json', ...cors } });
       } catch(err) { return json({ error: err.message }, 500); }
+    }
+
+    // ── GET /api/admin/mod-logs ──────────────────────────────
+    if (url.pathname === '/api/admin/mod-logs' && request.method === 'GET') {
+      try {
+        const token = request.headers.get('X-User-Token');
+        const user = await getUser(token);
+        const admin = await getProfile(user?.id);
+        if (!admin?.is_admin) return json({ error: 'Forbidden' }, 403);
+        const r = await fetch(`${env.SUPABASE_URL}/rest/v1/mod_logs?order=created_at.desc&limit=100&select=*,profiles(display_name,username)`, {
+          headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY}` }
+        });
+        const data = await r.json();
+        return json(Array.isArray(data) ? data : []);
+      } catch(err) { return json([], 200); }
     }
 
     // ── POST /api/admin/set-tier ─────────────────────────────
@@ -572,6 +665,13 @@ export default {
 
         const { prompt } = await request.json();
         if (!prompt) return json({ error: 'Prompt required' }, 400);
+
+        // ── Moderate image prompt ──────────────────────────
+        const imgViolation = moderateContent(prompt);
+        if (imgViolation) {
+          await logViolation(user.id, 'image', prompt);
+          return json({ error: imgViolation, moderated: true }, 400);
+        }
 
         const cfHeaders = { 'Authorization': `Bearer ${env.CF_AI_TOKEN}`, 'Content-Type': 'application/json' };
         const baseUrl = `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/ai/run`;
