@@ -64,14 +64,18 @@ export default {
     }
 
     // ── GET /api/site-status ─────────────────────────────────
-    // Public endpoint — returns site_down flag and banner message
     if (url.pathname === '/api/site-status' && request.method === 'GET') {
       const cfg = await getSiteConfig();
       return json({
         site_down: cfg.site_down === 'true',
         down_message: cfg.down_message || 'NovaAI is temporarily offline for maintenance. Check back soon.',
         banner: cfg.banner || null,
-        banner_type: cfg.banner_type || 'info'
+        banner_type: cfg.banner_type || 'info',
+        discord_invite: cfg.discord_invite || null,
+        discord_server_name: cfg.discord_server_name || null,
+        bot_name: cfg.bot_name || null,
+        bot_color: cfg.bot_color || null,
+        bot_avatar_url: cfg.bot_avatar_url || null
       });
     }
 
