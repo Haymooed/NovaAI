@@ -32,6 +32,11 @@
       <input id="reg-pass" class="auth-input" type="password" placeholder="Password (min 6 chars)"/>
       <button class="auth-btn" onclick="doRegister()">Create Account</button>
     </div>
+    <div class="auth-divider"><span>or</span></div>
+    <button class="auth-btn-google" onclick="doGithubLogin()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+      Continue with GitHub
+    </button>
   </div>
 </div>
 
@@ -70,6 +75,18 @@
       <button class="nav-btn" id="nav-images" onclick="setActiveSection('images')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
         My Images
+      </button>
+      <button class="nav-btn" id="nav-builder" onclick="setActiveSection('builder')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        Site Builder
+      </button>
+      <button class="nav-btn" id="nav-notes" onclick="setActiveSection('notes')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        Notes
+      </button>
+      <button class="nav-btn" id="nav-code" onclick="setActiveSection('code')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        Code Lab
       </button>
     </div>
 
@@ -232,6 +249,99 @@
         <button id="post-update-btn" class="btn-primary sm hidden" onclick="openPostUpdate()">+ Post Update</button>
       </div>
       <div id="update-log-list" class="update-list"></div>
+    </div>
+
+    <!-- Website Builder panel -->
+    <div id="panel-builder" class="panel builder-panel">
+      <div class="builder-layout">
+        <div class="builder-sidebar">
+          <div class="builder-sidebar-head">
+            <div class="builder-logo">🌐 Site Builder</div>
+          </div>
+          <div class="builder-field">
+            <label class="form-label">Describe your website</label>
+            <textarea id="builder-prompt" class="form-input" rows="4" placeholder="e.g. A modern landing page for a coffee shop with a menu section, gallery, and contact form…"></textarea>
+            <button id="builder-gen-btn" class="btn-primary" style="width:100%;margin-top:8px" onclick="builderGenerate()">✨ Generate Website</button>
+          </div>
+          <div id="builder-status" class="builder-status"></div>
+          <div class="builder-field">
+            <label class="form-label">Refine / Edit</label>
+            <textarea id="builder-refine" class="form-input" rows="3" placeholder="e.g. Make the hero section taller, change the colour to blue…"></textarea>
+            <button id="builder-refine-btn" class="btn-secondary" style="width:100%;margin-top:8px" onclick="builderRefine()">🔧 Refine</button>
+          </div>
+          <div class="builder-actions">
+            <button class="builder-act-btn" onclick="builderExportHTML()" title="Download HTML">⬇️ Export</button>
+            <button class="builder-act-btn" onclick="builderCopyHTML()" title="Copy HTML">📋 Copy</button>
+            <button class="builder-act-btn" onclick="builderTogglePreview()" title="View source">🗒 Source</button>
+          </div>
+          <div id="builder-history"></div>
+        </div>
+        <div class="builder-preview-wrap">
+          <div class="builder-preview-bar">
+            <div class="builder-url-bar">
+              <span class="builder-url-icon">🔒</span>
+              <span class="builder-url-text">nova-preview.local</span>
+            </div>
+            <button class="builder-act-btn sm" onclick="document.getElementById('builder-preview').contentWindow.location.reload()">↻</button>
+          </div>
+          <iframe id="builder-preview" class="builder-preview" sandbox="allow-scripts allow-same-origin"></iframe>
+          <textarea id="builder-code-view" class="builder-code-view hidden" spellcheck="false" placeholder="HTML source will appear here…"></textarea>
+          <button id="builder-apply-btn" class="btn-primary hidden" style="position:absolute;bottom:16px;right:16px" onclick="builderApplyCode()">Apply Changes</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notes panel -->
+    <div id="panel-notes" class="panel notes-panel">
+      <div class="notes-layout">
+        <div class="notes-sidebar">
+          <div class="notes-sidebar-head">
+            <span style="font-weight:700;font-size:15px">📝 Notes</span>
+            <button class="btn-primary sm" onclick="newNote()">+ New</button>
+          </div>
+          <div id="notes-list" class="notes-list"></div>
+        </div>
+        <div class="notes-editor">
+          <div class="notes-editor-head">
+            <input id="note-title" class="note-title-input" type="text" placeholder="Note title…" oninput="noteInput()"/>
+            <div class="notes-editor-actions">
+              <span id="note-updated" class="note-updated"></span>
+              <button id="note-ai-btn" class="btn-secondary sm" onclick="aiEnhanceNote()">✨ AI Enhance</button>
+              <button class="btn-secondary sm" onclick="exportNote()">⬇️ Export</button>
+              <button class="btn-danger sm" onclick="deleteCurrentNote()">🗑</button>
+            </div>
+          </div>
+          <textarea id="note-editor" class="note-editor" placeholder="Start writing…" oninput="noteInput()"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Code Lab panel -->
+    <div id="panel-code" class="panel code-panel">
+      <div class="code-layout">
+        <div class="code-editor-col">
+          <div class="code-toolbar">
+            <select id="code-lang" class="form-input sm" style="width:90px" onchange="initCodePlayground()">
+              <option value="html">HTML</option>
+              <option value="js">JavaScript</option>
+              <option value="css">CSS</option>
+            </select>
+            <div style="display:flex;gap:6px;flex:1;min-width:0">
+              <input id="code-prompt" class="form-input sm" style="flex:1;margin:0" placeholder="Describe code to generate…"/>
+              <button id="code-gen-btn" class="btn-primary sm" onclick="aiGenerateCode()">✨ Generate</button>
+            </div>
+            <button id="code-ai-fix-btn" class="btn-secondary sm" onclick="aiFixCode()">🤖 AI Fix</button>
+            <button class="btn-secondary sm" onclick="copyCode()">📋</button>
+            <button class="btn-secondary sm" onclick="downloadCode()">⬇️</button>
+            <button class="btn-primary sm" onclick="runCode()">▶ Run</button>
+          </div>
+          <textarea id="code-editor" class="code-editor" spellcheck="false" placeholder="Write or generate code here…"></textarea>
+        </div>
+        <div class="code-preview-col">
+          <div class="code-preview-bar">Output</div>
+          <iframe id="code-output" class="code-output" sandbox="allow-scripts"></iframe>
+        </div>
+      </div>
     </div>
   </main>
 </div>
