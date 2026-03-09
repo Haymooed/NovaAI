@@ -234,8 +234,9 @@ async function doRegister() {
   btn.textContent = 'Create Account'; btn.disabled = false;
   if (error) return authErr(error.message);
   if (data.user) {
-    const username = name.toLowerCase().replace(/[^a-z0-9]/g,'_').slice(0,30);
-    await SB.from('profiles').upsert({ id: data.user.id, display_name: name, username, avatar_color: COLORS[Math.floor(Math.random()*COLORS.length)] });
+    const username = name.toLowerCase().replace(/[^a-z0-9]/g,'_').slice(0,30) + '_' + Date.now().toString(36);
+    const { error: profileError } = await SB.from('profiles').upsert({ id: data.user.id, display_name: name, username, avatar_color: COLORS[Math.floor(Math.random()*COLORS.length)] });
+    if (profileError) return authErr('Profile error: ' + profileError.message);
     showToast('Account created!');
   }
 }
