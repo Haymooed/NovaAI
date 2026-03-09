@@ -31,6 +31,69 @@ html,body{height:100%;overflow:hidden;font-family:'Inter',system-ui,sans-serif;f
   --shadow:0 8px 40px #000000cc;
 }
 
+
+
+[data-admin-theme="anime"]{
+  --accent:#ec4899;--accent2:#f9a8d4;--accent-bg:#ec489922;
+  --bg:#120d1f;--bg2:#19122b;--bg3:#241a3a;--bg4:#2f2248;
+  --border:#463468;
+}
+[data-admin-theme="summer"]{
+  --accent:#f97316;--accent2:#fdba74;--accent-bg:#f9731624;
+  --bg:#1a1409;--bg2:#241b0d;--bg3:#2e220f;--bg4:#3a2b12;
+  --border:#5d4218;
+}
+[data-admin-theme="winter"]{
+  --accent:#38bdf8;--accent2:#7dd3fc;--accent-bg:#38bdf822;
+  --bg:#08131b;--bg2:#0e1d27;--bg3:#122533;--bg4:#183041;
+  --border:#24465d;
+}
+[data-admin-theme="halloween"]{
+  --accent:#f97316;--accent2:#fdba74;--accent-bg:#f9731628;
+  --bg:#120d08;--bg2:#1a120b;--bg3:#25180d;--bg4:#311f11;
+  --border:#5c3215;--text:#ffe7cc;--text2:#f2b980;
+}
+[data-admin-theme="easter"]{
+  --accent:#a78bfa;--accent2:#f9a8d4;--accent-bg:#c4b5fd2b;
+  --bg:#16121f;--bg2:#1f1830;--bg3:#2b2142;--bg4:#362953;
+  --border:#57457a;
+}
+[data-admin-theme="christmas"]{
+  --accent:#dc2626;--accent2:#22c55e;--accent-bg:#dc262622;
+  --bg:#0d1710;--bg2:#112015;--bg3:#182b1d;--bg4:#1f3525;
+  --border:#2f5d40;
+}
+[data-admin-theme="brainrot"]{
+  --accent:#eab308;--accent2:#fb7185;--accent-bg:#eab3082a;
+}
+
+
+html[data-admin-theme]:not([data-admin-theme="default"]) body{
+  background-image:radial-gradient(circle at 10% 10%,var(--accent-bg),transparent 45%),radial-gradient(circle at 90% 20%,var(--accent-bg),transparent 45%);
+}
+html[data-admin-theme]:not([data-admin-theme="default"]) .auth-screen,
+html[data-admin-theme]:not([data-admin-theme="default"]) .app,
+html[data-admin-theme]:not([data-admin-theme="default"]) .sidebar,
+html[data-admin-theme]:not([data-admin-theme="default"]) .chat-top,
+html[data-admin-theme]:not([data-admin-theme="default"]) .composer,
+html[data-admin-theme]:not([data-admin-theme="default"]) .modal{
+  backdrop-filter:saturate(1.12);
+}
+
+.global-theme-effects{position:fixed;inset:0;pointer-events:none;z-index:1200;overflow:hidden}
+
+.theme-chaos-emoji{
+  position:fixed;top:-8vh;font-size:clamp(16px,2.2vw,28px);z-index:1200;pointer-events:none;
+  animation:fall-chaos linear forwards;filter:drop-shadow(0 3px 8px #0007);
+}
+@keyframes fall-chaos{to{transform:translateY(115vh) rotate(360deg) scale(1.05);opacity:.95}}
+.theme-brainrot{filter:drop-shadow(0 4px 12px #ff0a)}
+.theme-anime{filter:drop-shadow(0 3px 10px #ec489980)}
+.theme-summer{filter:drop-shadow(0 3px 10px #f9731680)}
+.theme-winter{filter:drop-shadow(0 3px 10px #38bdf880)}
+.theme-halloween{filter:drop-shadow(0 3px 10px #f9731680)}
+.theme-easter{filter:drop-shadow(0 3px 10px #a78bfa80)}
+.theme-christmas{filter:drop-shadow(0 3px 10px #22c55e88)}
 /* ── Font sizes ───────────────────────────────────────────── */
 [data-fs="sm"]{font-size:13px}
 [data-fs="md"]{font-size:15px}
@@ -387,13 +450,13 @@ html,body{height:100%;overflow:hidden;font-family:'Inter',system-ui,sans-serif;f
 }
 
 /* ── Admin Panel ──────────────────────────────────────────── */
-.admin-modal-wide { max-width: 740px; }
-.admin-tabs { display: flex; gap: 4px; background: var(--bg3); border-radius: 10px; padding: 4px; margin-bottom: 18px; }
-.admin-tab { flex: 1; padding: 8px; background: none; border: none; border-radius: 7px; color: var(--text2); font-size: 13px; font-weight: 500; cursor: pointer; transition: .15s; }
+.admin-modal-wide { max-width: 940px; }
+.admin-tabs { display: flex; gap: 4px; flex-wrap:wrap; background: var(--bg3); border-radius: 12px; padding: 6px; margin-bottom: 18px; border:1px solid var(--border);} 
+.admin-tab { flex: 1 1 140px; padding: 10px; background: none; border: none; border-radius: 8px; color: var(--text2); font-size: 13px; font-weight: 600; cursor: pointer; transition: .15s; }
 .admin-tab:hover { color: var(--text); }
 .admin-tab.active { background: var(--accent); color: #fff; font-weight: 600; }
 .admin-pane { display: none; }
-.admin-pane.active { display: block; }
+.admin-pane.active { display: block; background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:14px; }
 
 .admin-status-card { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 10px; margin-bottom: 16px; font-weight: 600; font-size: 14px; }
 .admin-status-card.ok { background: #10b98120; color: #10b981; border: 1px solid #10b98140; }
@@ -443,6 +506,17 @@ html,body{height:100%;overflow:hidden;font-family:'Inter',system-ui,sans-serif;f
 /* form-input sm */
 .form-input.sm { padding: 7px 10px; font-size: 13px; }
 
+
+.admin-theme-hero{display:flex;justify-content:space-between;gap:14px;align-items:center;padding:12px;border:1px solid var(--border);border-radius:10px;background:var(--bg3);margin-bottom:14px}
+.admin-theme-active-pill{padding:8px 12px;border-radius:999px;background:var(--accent-bg);color:var(--accent2);font-weight:700;font-size:12px;white-space:nowrap}
+.admin-theme-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+.admin-theme-card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:left;cursor:pointer;transition:.15s;color:var(--text)}
+.admin-theme-card:hover{border-color:var(--accent);transform:translateY(-1px)}
+.admin-theme-card.active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent-bg) inset;background:linear-gradient(135deg,var(--accent-bg),transparent)}
+.admin-theme-icon{font-size:22px;margin-bottom:8px}
+.admin-theme-title{font-size:14px;font-weight:700;margin-bottom:4px}
+.admin-theme-desc{font-size:12px;color:var(--text3);line-height:1.4;min-height:32px}
+.admin-theme-cta{margin-top:10px;font-size:11px;font-weight:700;color:var(--accent2)}
 /* ── Site-down screen ──────────────────────────────────────── */
 .site-down { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 9999; }
 .site-down-card { text-align: center; padding: 48px 32px; background: var(--bg2); border: 1px solid var(--border); border-radius: 20px; max-width: 420px; box-shadow: var(--shadow); }

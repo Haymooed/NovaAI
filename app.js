@@ -7,6 +7,17 @@ let DAILY_MSGS = 0, DAILY_IMGS = 0, IMG_LIMIT = 3;
 let GROUP_REALTIME = null, IS_LOADING = false;
 const COLORS = ['#7c3aed','#3b82f6','#10b981','#f59e0b','#ef4444','#ec4899','#06b6d4','#8b5cf6','#84cc16'];
 
+const ADMIN_UI_THEMES = [
+  { key: 'default', name: 'Default', icon: '🧠', desc: 'Clean NovaAI experience with your local appearance settings.' },
+  { key: 'brainrot', name: 'Brainrot Mode', icon: '🤪', desc: 'Chaotic emoji rain and extra motion everywhere.' },
+  { key: 'anime', name: 'Anime Mode', icon: '🌸', desc: 'Pastel neon gradients inspired by anime UI style.' },
+  { key: 'summer', name: 'Summer', icon: '🌴', desc: 'Warm beach colours with sun-kissed highlights.' },
+  { key: 'winter', name: 'Winter', icon: '❄️', desc: 'Cool frosty tones with soft glass effects.' },
+  { key: 'halloween', name: 'Halloween', icon: '🎃', desc: 'Spooky orange + midnight accents.' },
+  { key: 'easter', name: 'Easter', icon: '🐣', desc: 'Playful candy pastel palette.' },
+  { key: 'christmas', name: 'Christmas', icon: '🎄', desc: 'Festive red/green holiday vibe.' }
+];
+
 
 // ── Worker API helpers (bypass Supabase JS RLS issues) ────
 async function api(path, body) {
@@ -73,6 +84,7 @@ async function loadBotProfile() {
     const d = await res.json();
     // Cache config for client-side limit calculations
     window._adminCfgCache = d;
+    applyAdminThemeFromConfig(d);
     if (d.bot_name || d.bot_color || d.bot_avatar_url) {
       ADMIN_CFG.bot_name = d.bot_name;
       ADMIN_CFG.bot_color = d.bot_color;
@@ -1056,6 +1068,8 @@ async function clearAllChats() {
 // ── Admin ──────────────────────────────────────────────────
 let ADMIN_CFG = {};
 let ADMIN_USERS = [];
+let ACTIVE_ADMIN_THEME = 'default';
+let THEME_CHAOS_TIMER = null;
 
 async function openAdmin() {
   document.getElementById('admin-modal').classList.remove('hidden');
@@ -1076,6 +1090,7 @@ async function loadAdminConfig() {
   renderAdminSitePane();
   renderAdminLimitsPane();
   renderAdminBannerPane();
+  renderAdminThemesPane();
   renderAdminBotPane();
 }
 
@@ -1383,6 +1398,102 @@ function applyBotProfile() {
   if (wl) wl.textContent = name[0].toUpperCase();
 }
 
+
+function getThemeMeta(themeKey) {
+  return ADMIN_UI_THEMES.find(t => t.key === themeKey) || ADMIN_UI_THEMES[0];
+}
+
+function normaliseAdminTheme(themeKey) {
+  const exists = ADMIN_UI_THEMES.some(t => t.key === themeKey);
+  return exists ? themeKey : 'default';
+}
+
+function getThemeEffectsRoot() {
+  let root = document.getElementById('global-theme-effects');
+  if (!root) {
+    root = document.createElement('div');
+    root.id = 'global-theme-effects';
+    root.className = 'global-theme-effects';
+    document.body.appendChild(root);
+  }
+  return root;
+}
+
+function clearThemeChaos() {
+  if (THEME_CHAOS_TIMER) {
+    clearInterval(THEME_CHAOS_TIMER);
+    THEME_CHAOS_TIMER = null;
+  }
+  const root = document.getElementById('global-theme-effects');
+  if (root) root.innerHTML = '';
+}
+
+function spawnThemeParticle(theme) {
+  const map = {
+    brainrot: ['🔥','💀','🤡','💥','😵‍💫','🧠','🍌','🚨','✨'],
+    anime: ['🌸','⭐','💖','✨'],
+    summer: ['☀️','🌴','🏖️','🍉'],
+    winter: ['❄️','☃️','🧊','✨'],
+    halloween: ['🎃','🕸️','👻','🦇'],
+    easter: ['🐣','🥚','🌷','🪺'],
+    christmas: ['🎄','❄️','🎁','🔔']
+  };
+  const opts = map[theme] || map.brainrot;
+  const el = document.createElement('div');
+  el.className = `theme-chaos-emoji theme-${theme}`;
+  el.textContent = opts[Math.floor(Math.random() * opts.length)];
+  el.style.left = (Math.random() * 96) + 'vw';
+  el.style.animationDuration = (4 + Math.random() * 5) + 's';
+  getThemeEffectsRoot().appendChild(el);
+  setTimeout(() => el.remove(), 10000);
+}
+
+function applyAdminThemeFromConfig(cfg = {}) {
+  const raw = cfg.active_ui_theme || cfg.ui_theme || 'default';
+  const theme = normaliseAdminTheme(raw);
+  ACTIVE_ADMIN_THEME = theme;
+  document.documentElement.setAttribute('data-admin-theme', theme);
+  clearThemeChaos();
+  if (theme !== 'default') {
+    for (let i = 0; i < (theme === 'brainrot' ? 10 : 5); i++) spawnThemeParticle(theme);
+    THEME_CHAOS_TIMER = setInterval(() => spawnThemeParticle(theme), theme === 'brainrot' ? 550 : 1800);
+  }
+}
+
+function renderAdminThemesPane() {
+  const c = ADMIN_CFG;
+  const selected = normaliseAdminTheme(c.active_ui_theme || 'default');
+  const selectedMeta = getThemeMeta(selected);
+  document.getElementById('admin-themes-inner').innerHTML = `
+    <div class="admin-theme-hero">
+      <div>
+        <div class="admin-section-label" style="margin-bottom:6px">🎨 Admin Controlled UI Theme</div>
+        <div class="admin-toggle-sub">Choose a global visual mode for all users. This setting overrides local appearance theme style only (font size/density still stay personal).</div>
+      </div>
+      <div class="admin-theme-active-pill">${selectedMeta.icon} ${selectedMeta.name}</div>
+    </div>
+    <div class="admin-theme-grid">
+      ${ADMIN_UI_THEMES.map(t => `
+        <button class="admin-theme-card ${selected===t.key?'active':''}" onclick="adminSetActiveTheme('${t.key}')">
+          <div class="admin-theme-icon">${t.icon}</div>
+          <div class="admin-theme-title">${t.name}</div>
+          <div class="admin-theme-desc">${t.desc}</div>
+          <div class="admin-theme-cta">${selected===t.key?'Active Theme':'Activate'}</div>
+        </button>
+      `).join('')}
+    </div>`;
+}
+
+async function adminSetActiveTheme(themeKey) {
+  const theme = normaliseAdminTheme(themeKey);
+  await adminSetConfig('active_ui_theme', theme);
+  ADMIN_CFG.active_ui_theme = theme;
+  window._adminCfgCache = { ...(window._adminCfgCache || {}), active_ui_theme: theme };
+  applyAdminThemeFromConfig(window._adminCfgCache);
+  renderAdminThemesPane();
+  showToast(`${getThemeMeta(theme).name} activated for all users`);
+}
+
 async function loadAdminModLogs() {
   const el = document.getElementById('admin-mod-logs');
   if (!el) return;
@@ -1536,6 +1647,8 @@ async function checkSiteStatus() {
   try {
     const res = await fetch('/api/site-status');
     const data = await res.json();
+    window._adminCfgCache = { ...(window._adminCfgCache || {}), ...data };
+    applyAdminThemeFromConfig(data);
     if (data.site_down && !ME?.is_admin) {
       document.getElementById('app').classList.add('hidden');
       document.getElementById('site-down-screen').classList.remove('hidden');

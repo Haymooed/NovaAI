@@ -127,7 +127,8 @@ export default {
         discord_server_name: cfg.discord_server_name || null,
         bot_name: cfg.bot_name || null,
         bot_color: cfg.bot_color || null,
-        bot_avatar_url: cfg.bot_avatar_url || null
+        bot_avatar_url: cfg.bot_avatar_url || null,
+        active_ui_theme: cfg.active_ui_theme || 'default'
       });
     }
 

@@ -452,6 +452,7 @@
       <button class="admin-tab active" data-tab="site" onclick="switchAdminTab('site')">🌐 Site</button>
       <button class="admin-tab" data-tab="limits" onclick="switchAdminTab('limits')">📊 Limits</button>
       <button class="admin-tab" data-tab="banner" onclick="switchAdminTab('banner')">📢 Banner</button>
+      <button class="admin-tab" data-tab="themes" onclick="switchAdminTab('themes')">🎭 Themes</button>
       <button class="admin-tab" data-tab="users" onclick="switchAdminTab('users')">👥 Users</button>
       <button class="admin-tab" data-tab="bot" onclick="switchAdminTab('bot')">🤖 Bot</button>
       <button class="admin-tab" data-tab="mod" onclick="switchAdminTab('mod')">🛡 Mod Logs</button>
@@ -471,6 +472,11 @@
     <!-- Banner -->
     <div id="admin-pane-banner" class="admin-pane">
       <div id="admin-banner-inner"></div>
+    </div>
+
+    <!-- Theme Control -->
+    <div id="admin-pane-themes" class="admin-pane">
+      <div id="admin-themes-inner"></div>
     </div>
 
     <!-- Moderation Logs -->
@@ -675,6 +681,8 @@
   <span id="site-banner-text"></span>
   <button onclick="document.getElementById('site-banner').classList.add('hidden')" style="background:none;border:none;cursor:pointer;font-size:16px;line-height:1;padding:0 0 0 12px;opacity:.7">✕</button>
 </div>
+
+<div id="global-theme-effects" class="global-theme-effects"></div>
 
 <script src="app.js"></script>
 </body>
